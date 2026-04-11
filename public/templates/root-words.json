@@ -1,0 +1,482 @@
+[
+  {
+    "root": "port",
+    "meaning": "mang; vận chuyển",
+    "description": "Gốc từ liên quan đến việc mang, vận chuyển, hỗ trợ và truyền tải.",
+    "level": "basic",
+    "tags": ["travel", "logistics", "communication"],
+    "is_published": true,
+    "words": [
+      {
+        "word": "transport",
+        "part_of_speech": "verb",
+        "pronunciation": "/trans-port/",
+        "meaning_en": "to carry from one place to another",
+        "meaning_vi": "vận chuyển",
+        "example_sentences": [
+          {
+            "english_sentence": "This company can transport goods overnight.",
+            "vietnamese_sentence": "Công ty này có thể vận chuyển hàng hóa qua đêm.",
+            "usage_context": "logistics",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "portable",
+        "part_of_speech": "adjective",
+        "pronunciation": "/por-tuh-buhl/",
+        "meaning_en": "easy to carry",
+        "meaning_vi": "dễ mang theo",
+        "example_sentences": [
+          {
+            "english_sentence": "I need a portable speaker for weekend trips.",
+            "vietnamese_sentence": "Tôi cần một loa dễ mang theo cho chuyến đi cuối tuần.",
+            "usage_context": "travel",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "import",
+        "part_of_speech": "verb",
+        "pronunciation": "/im-port/",
+        "meaning_en": "to bring in from another place",
+        "meaning_vi": "nhập khẩu; nhập vào",
+        "example_sentences": [
+          {
+            "english_sentence": "The store will import new coffee beans next week.",
+            "vietnamese_sentence": "Cửa hàng sẽ nhập lô hạt cà phê mới vào tuần tới.",
+            "usage_context": "business",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "export",
+        "part_of_speech": "verb",
+        "pronunciation": "/eks-port/",
+        "meaning_en": "to send goods out to another place",
+        "meaning_vi": "xuất khẩu; xuất ra",
+        "example_sentences": [
+          {
+            "english_sentence": "The factory exports rice to many markets.",
+            "vietnamese_sentence": "Nhà máy xuất khẩu gạo đến nhiều thị trường.",
+            "usage_context": "trade",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "support",
+        "part_of_speech": "verb",
+        "pronunciation": "/suh-port/",
+        "meaning_en": "to hold up or help",
+        "meaning_vi": "hỗ trợ; nâng đỡ",
+        "example_sentences": [
+          {
+            "english_sentence": "Good shoes support your feet all day.",
+            "vietnamese_sentence": "Giày tốt nâng đỡ bàn chân của bạn suốt cả ngày.",
+            "usage_context": "health",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "report",
+        "part_of_speech": "verb",
+        "pronunciation": "/ri-port/",
+        "meaning_en": "to carry information back",
+        "meaning_vi": "báo cáo; tường trình",
+        "example_sentences": [
+          {
+            "english_sentence": "Please report the issue before noon.",
+            "vietnamese_sentence": "Hãy báo cáo sự cố trước buổi trưa.",
+            "usage_context": "workplace",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "porter",
+        "part_of_speech": "noun",
+        "pronunciation": "/por-ter/",
+        "meaning_en": "a person who carries luggage",
+        "meaning_vi": "người khuân vác",
+        "example_sentences": [
+          {
+            "english_sentence": "The porter carried our bags to the lobby.",
+            "vietnamese_sentence": "Người khuân vác đã mang hành lý của chúng tôi vào sảnh.",
+            "usage_context": "travel",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "teleport",
+        "part_of_speech": "verb",
+        "pronunciation": "/tel-uh-port/",
+        "meaning_en": "to move instantly across distance",
+        "meaning_vi": "dịch chuyển tức thời",
+        "example_sentences": [
+          {
+            "english_sentence": "The game lets players teleport across the map.",
+            "vietnamese_sentence": "Trò chơi cho phép người chơi dịch chuyển tức thời khắp bản đồ.",
+            "usage_context": "gaming",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "passport",
+        "part_of_speech": "noun",
+        "pronunciation": "/pas-port/",
+        "meaning_en": "an official travel document",
+        "meaning_vi": "hộ chiếu",
+        "example_sentences": [
+          {
+            "english_sentence": "Keep your passport in a safe pocket.",
+            "vietnamese_sentence": "Hãy giữ hộ chiếu trong một ngăn an toàn.",
+            "usage_context": "travel",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "portfolio",
+        "part_of_speech": "noun",
+        "pronunciation": "/port-foh-lee-oh/",
+        "meaning_en": "a collection carried together for review",
+        "meaning_vi": "hồ sơ năng lực; danh mục đầu tư",
+        "example_sentences": [
+          {
+            "english_sentence": "She shared her design portfolio with the team.",
+            "vietnamese_sentence": "Cô ấy đã chia sẻ hồ sơ năng lực thiết kế của mình với cả nhóm.",
+            "usage_context": "career",
+            "is_daily_usage": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "root": "cred",
+    "meaning": "tin; tín nhiệm",
+    "description": "Gốc từ liên quan đến niềm tin, uy tín và sự đáng tin cậy.",
+    "level": "basic",
+    "tags": ["communication", "trust", "academic"],
+    "is_published": true,
+    "words": [
+      {
+        "word": "credible",
+        "part_of_speech": "adjective",
+        "pronunciation": "/kred-uh-buhl/",
+        "meaning_en": "able to be believed",
+        "meaning_vi": "đáng tin",
+        "example_sentences": [
+          {
+            "english_sentence": "The witness gave a credible explanation.",
+            "vietnamese_sentence": "Nhân chứng đã đưa ra một lời giải thích đáng tin.",
+            "usage_context": "communication",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "credit",
+        "part_of_speech": "noun",
+        "pronunciation": "/kred-it/",
+        "meaning_en": "trust or praise given for something",
+        "meaning_vi": "sự ghi nhận; tín dụng",
+        "example_sentences": [
+          {
+            "english_sentence": "She earned credit for solving the issue quickly.",
+            "vietnamese_sentence": "Cô ấy được ghi nhận vì giải quyết sự cố nhanh chóng.",
+            "usage_context": "workplace",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "creed",
+        "part_of_speech": "noun",
+        "pronunciation": "/kreed/",
+        "meaning_en": "a set of beliefs",
+        "meaning_vi": "tín điều",
+        "example_sentences": [
+          {
+            "english_sentence": "The team follows a simple creed of honesty.",
+            "vietnamese_sentence": "Cả đội theo đuổi một tín điều đơn giản về sự trung thực.",
+            "usage_context": "culture",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "credential",
+        "part_of_speech": "noun",
+        "pronunciation": "/kri-den-shuhl/",
+        "meaning_en": "proof of qualification",
+        "meaning_vi": "chứng chỉ; năng lực xác thực",
+        "example_sentences": [
+          {
+            "english_sentence": "Your teaching credential is valid for another year.",
+            "vietnamese_sentence": "Chứng chỉ giảng dạy của bạn còn hiệu lực thêm một năm.",
+            "usage_context": "education",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "credence",
+        "part_of_speech": "noun",
+        "pronunciation": "/kree-duhns/",
+        "meaning_en": "belief that something is true",
+        "meaning_vi": "sự tin tưởng",
+        "example_sentences": [
+          {
+            "english_sentence": "Few people gave credence to the rumor.",
+            "vietnamese_sentence": "Rất ít người tin vào tin đồn đó.",
+            "usage_context": "media",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "credulous",
+        "part_of_speech": "adjective",
+        "pronunciation": "/krej-uh-luhs/",
+        "meaning_en": "too ready to believe",
+        "meaning_vi": "cả tin",
+        "example_sentences": [
+          {
+            "english_sentence": "Young readers should not be credulous online.",
+            "vietnamese_sentence": "Người đọc trẻ không nên quá cả tin trên mạng.",
+            "usage_context": "digital",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "discredit",
+        "part_of_speech": "verb",
+        "pronunciation": "/dis-kred-it/",
+        "meaning_en": "to harm trust in someone or something",
+        "meaning_vi": "làm mất uy tín",
+        "example_sentences": [
+          {
+            "english_sentence": "False claims can discredit a good project.",
+            "vietnamese_sentence": "Những lời cáo buộc sai có thể làm mất uy tín của một dự án tốt.",
+            "usage_context": "workplace",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "accredit",
+        "part_of_speech": "verb",
+        "pronunciation": "/uh-kred-it/",
+        "meaning_en": "to officially recognize",
+        "meaning_vi": "công nhận; cấp chứng nhận",
+        "example_sentences": [
+          {
+            "english_sentence": "The board will accredit the course this spring.",
+            "vietnamese_sentence": "Hội đồng sẽ công nhận khóa học này vào mùa xuân.",
+            "usage_context": "education",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "credibility",
+        "part_of_speech": "noun",
+        "pronunciation": "/kred-uh-bil-i-tee/",
+        "meaning_en": "the quality of being trusted",
+        "meaning_vi": "độ tin cậy",
+        "example_sentences": [
+          {
+            "english_sentence": "Clear data improves the credibility of the report.",
+            "vietnamese_sentence": "Dữ liệu rõ ràng làm tăng độ tin cậy của bản báo cáo.",
+            "usage_context": "analysis",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "credo",
+        "part_of_speech": "noun",
+        "pronunciation": "/kree-doh/",
+        "meaning_en": "a guiding belief",
+        "meaning_vi": "niềm tin cốt lõi; phương châm",
+        "example_sentences": [
+          {
+            "english_sentence": "Her personal credo is to learn a little every day.",
+            "vietnamese_sentence": "Phương châm sống của cô ấy là học một ít mỗi ngày.",
+            "usage_context": "self-study",
+            "is_daily_usage": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "root": "ject",
+    "meaning": "ném; quăng",
+    "description": "Gốc từ liên quan đến việc ném, đẩy ra, phản đối hoặc phóng ra phía trước.",
+    "level": "basic",
+    "tags": ["science", "communication", "daily-use"],
+    "is_published": true,
+    "words": [
+      {
+        "word": "project",
+        "part_of_speech": "verb",
+        "pronunciation": "/pruh-jekt/",
+        "meaning_en": "to cast forward as an image or plan",
+        "meaning_vi": "chiếu; phóng ra",
+        "example_sentences": [
+          {
+            "english_sentence": "We will project the slides on the wall.",
+            "vietnamese_sentence": "Chúng tôi sẽ chiếu các slide lên tường.",
+            "usage_context": "presentation",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "reject",
+        "part_of_speech": "verb",
+        "pronunciation": "/ri-jekt/",
+        "meaning_en": "to throw back or refuse",
+        "meaning_vi": "từ chối",
+        "example_sentences": [
+          {
+            "english_sentence": "The editor may reject unclear proposals.",
+            "vietnamese_sentence": "Biên tập viên có thể từ chối các đề xuất chưa rõ ràng.",
+            "usage_context": "workplace",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "inject",
+        "part_of_speech": "verb",
+        "pronunciation": "/in-jekt/",
+        "meaning_en": "to put into by force",
+        "meaning_vi": "tiêm; bơm vào",
+        "example_sentences": [
+          {
+            "english_sentence": "The nurse will inject the vaccine at noon.",
+            "vietnamese_sentence": "Y tá sẽ tiêm vắc xin vào buổi trưa.",
+            "usage_context": "health",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "eject",
+        "part_of_speech": "verb",
+        "pronunciation": "/ee-jekt/",
+        "meaning_en": "to throw out",
+        "meaning_vi": "đẩy ra; bật ra",
+        "example_sentences": [
+          {
+            "english_sentence": "The capsule can eject in an emergency.",
+            "vietnamese_sentence": "Khoang ghế có thể bật ra trong trường hợp khẩn cấp.",
+            "usage_context": "safety",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "object",
+        "part_of_speech": "verb",
+        "pronunciation": "/ob-jekt/",
+        "meaning_en": "to oppose or protest",
+        "meaning_vi": "phản đối",
+        "example_sentences": [
+          {
+            "english_sentence": "Several parents object to the sudden change.",
+            "vietnamese_sentence": "Một số phụ huynh phản đối thay đổi đột ngột.",
+            "usage_context": "community",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "subject",
+        "part_of_speech": "noun",
+        "pronunciation": "/sub-jekt/",
+        "meaning_en": "a topic placed under discussion",
+        "meaning_vi": "chủ đề; môn học",
+        "example_sentences": [
+          {
+            "english_sentence": "Biology is her favorite subject.",
+            "vietnamese_sentence": "Sinh học là môn học yêu thích của cô ấy.",
+            "usage_context": "education",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "trajectory",
+        "part_of_speech": "noun",
+        "pronunciation": "/truh-jek-tuh-ree/",
+        "meaning_en": "the path of something projected",
+        "meaning_vi": "quỹ đạo",
+        "example_sentences": [
+          {
+            "english_sentence": "The rocket changed its trajectory after launch.",
+            "vietnamese_sentence": "Tên lửa đã đổi quỹ đạo sau khi phóng.",
+            "usage_context": "science",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "interject",
+        "part_of_speech": "verb",
+        "pronunciation": "/in-ter-jekt/",
+        "meaning_en": "to throw in a remark",
+        "meaning_vi": "xen vào",
+        "example_sentences": [
+          {
+            "english_sentence": "He tried to interject with a quick question.",
+            "vietnamese_sentence": "Anh ấy cố xen vào bằng một câu hỏi ngắn.",
+            "usage_context": "meeting",
+            "is_daily_usage": true
+          }
+        ]
+      },
+      {
+        "word": "deject",
+        "part_of_speech": "verb",
+        "pronunciation": "/di-jekt/",
+        "meaning_en": "to cast down emotionally",
+        "meaning_vi": "làm nản lòng",
+        "example_sentences": [
+          {
+            "english_sentence": "The delay did not deject the team.",
+            "vietnamese_sentence": "Sự chậm trễ không làm cả đội nản lòng.",
+            "usage_context": "teamwork",
+            "is_daily_usage": false
+          }
+        ]
+      },
+      {
+        "word": "conjecture",
+        "part_of_speech": "noun",
+        "pronunciation": "/kuhn-jek-cher/",
+        "meaning_en": "an idea formed from limited evidence",
+        "meaning_vi": "phỏng đoán",
+        "example_sentences": [
+          {
+            "english_sentence": "That answer is only a conjecture for now.",
+            "vietnamese_sentence": "Câu trả lời đó hiện chỉ là một phỏng đoán.",
+            "usage_context": "analysis",
+            "is_daily_usage": false
+          }
+        ]
+      }
+    ]
+  }
+]

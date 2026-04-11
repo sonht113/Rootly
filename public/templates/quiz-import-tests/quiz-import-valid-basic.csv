@@ -1,0 +1,4 @@
+Question Type,Question,Correct Answer,Explanation,Option A,Option B,Option C,Option D
+multiple_choice,"Root ""dict"" gần nhất với nghĩa nào?",nói; ra lệnh,"""dict"" liên quan đến nói, đọc hoặc ra lệnh.",ném; quăng,nói; ra lệnh,nhìn; xem,xây dựng
+multiple_choice,"Từ nào phù hợp với nghĩa ""từ điển""?",dictionary,"""dictionary"" là danh từ chỉ từ điển.",dictionary,predict,verdict,indicate
+text,"Viết một từ thuộc root ""dict"" có nghĩa là ""dự đoán"".",predict,"Một đáp án mẫu phù hợp là ""predict"".",,,,
