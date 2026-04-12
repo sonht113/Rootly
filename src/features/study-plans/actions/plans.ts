@@ -44,6 +44,7 @@ export async function deleteStudyPlanAction(planId: string) {
 
 export async function completeStudyPlanAction(planId: string) {
   await completeStudyPlan(planId);
+  revalidatePath("/calendar");
   revalidatePath("/today");
   revalidatePath("/progress");
   revalidatePath("/reviews");

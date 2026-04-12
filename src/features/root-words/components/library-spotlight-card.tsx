@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { RootLearningStatusBadge } from "@/features/root-words/components/root-learning-status-badge";
 import { cn } from "@/lib/utils/cn";
 import type { LibraryRootWord } from "@/server/repositories/root-words-repository";
 
@@ -39,6 +40,7 @@ export function LibrarySpotlightCard({ rootWord, className }: LibrarySpotlightCa
       <div className="relative flex h-full min-h-[328px] flex-col">
         <div className="space-y-5">
           <p className="text-[0.625rem] font-semibold uppercase tracking-[0.22em] text-white/80">Gợi ý trong ngày</p>
+          <RootLearningStatusBadge status={rootWord.learningStatus} className="bg-white/18 text-white backdrop-blur-sm" />
           <div className="max-w-[15rem] space-y-3">
             <h2 className="font-[family:var(--font-display)] text-[1.75rem] leading-[1.25] font-bold tracking-[-0.03em]">
               {buildSpotlightTitle(rootWord)}

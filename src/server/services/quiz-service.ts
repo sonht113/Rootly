@@ -1,9 +1,7 @@
 import { percent } from "@/lib/utils/numbers";
 import type { QuizQuestion, QuizSubmissionAnswer, RootWordQuizSetDetail } from "@/types/domain";
 
-function normalizeQuizAnswer(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
+export { isQuizAnswerCorrect } from "@/lib/utils/quiz";
 
 export function buildQuizQuestions(quizSet: RootWordQuizSetDetail): QuizQuestion[] {
   return quizSet.questions.map((question) => ({
@@ -11,6 +9,7 @@ export function buildQuizQuestions(quizSet: RootWordQuizSetDetail): QuizQuestion
     quizSetId: quizSet.id,
     questionType: question.question_type,
     prompt: question.prompt,
+    correctAnswer: question.correct_answer,
     options:
       question.question_type === "multiple_choice"
         ? [question.option_a, question.option_b, question.option_c, question.option_d].filter(
@@ -18,10 +17,6 @@ export function buildQuizQuestions(quizSet: RootWordQuizSetDetail): QuizQuestion
           )
         : undefined,
   }));
-}
-
-export function isQuizAnswerCorrect(userAnswer: string, correctAnswer: string) {
-  return normalizeQuizAnswer(userAnswer) === normalizeQuizAnswer(correctAnswer);
 }
 
 export function scoreQuizAnswers(answers: QuizSubmissionAnswer[]) {

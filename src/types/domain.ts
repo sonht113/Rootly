@@ -8,7 +8,7 @@ export type UserRootPlanStatus =
   | "overdue";
 export type UserRootPlanSource = "manual" | "teacher_suggested" | "auto";
 export type UserRootReviewStatus = "pending" | "done" | "missed" | "rescheduled";
-export type StudySessionType = "learn" | "review" | "quiz";
+export type StudySessionType = "learn" | "review" | "quiz" | "detail_view";
 export type RankingMetric = "root_words_learned" | "words_learned" | "reviews_completed" | "streak";
 export type RankingPeriod = "today" | "week" | "month" | "all";
 export type RankingScope = "all" | "class";
@@ -233,6 +233,7 @@ export interface QuizQuestion {
   quizSetId: string;
   questionType: QuizQuestionType;
   prompt: string;
+  correctAnswer: string;
   options?: string[];
 }
 
