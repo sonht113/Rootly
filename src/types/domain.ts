@@ -233,6 +233,7 @@ export interface QuizQuestion {
   quizSetId: string;
   questionType: QuizQuestionType;
   prompt: string;
+  correctAnswer: string;
   options?: string[];
 }
 

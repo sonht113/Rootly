@@ -1,4 +1,4 @@
-import { formatDistanceStrict, isToday, parseISO } from "date-fns";
+import { differenceInCalendarDays, formatDistanceStrict, isToday, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -6,10 +6,46 @@ import type { SchedulePlanInput, UpdatePlanInput } from "@/lib/validations/study
 import type { ProgressSummaryData, TodayDashboardData, UserRootPlanRow, UserRootReviewRow } from "@/types/domain";
 import { unwrapSupabaseError } from "@/server/repositories/shared";
 
+const ACTIVE_PLAN_STATUSES = ["planned", "overdue", "in_progress"] as const;
+
+interface ActivePlanCandidate {
+  id: string;
+  scheduled_date: string;
+  created_at: string;
+}
+
 function getLocalTodayDateString() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date());
+}
+
+function selectNearestActivePlan(plans: ActivePlanCandidate[]) {
+  const today = parseISO(getLocalTodayDateString());
+
+  return [...plans].sort((left, right) => {
+    const leftDate = parseISO(left.scheduled_date);
+    const rightDate = parseISO(right.scheduled_date);
+    const leftDistance = differenceInCalendarDays(leftDate, today);
+    const rightDistance = differenceInCalendarDays(rightDate, today);
+    const distanceDelta = Math.abs(leftDistance) - Math.abs(rightDistance);
+
+    if (distanceDelta !== 0) {
+      return distanceDelta;
+    }
+
+    const leftIsDueOrPast = leftDistance <= 0;
+    const rightIsDueOrPast = rightDistance <= 0;
+    if (leftIsDueOrPast !== rightIsDueOrPast) {
+      return leftIsDueOrPast ? -1 : 1;
+    }
+
+    if (left.scheduled_date !== right.scheduled_date) {
+      return right.scheduled_date.localeCompare(left.scheduled_date);
+    }
+
+    return right.created_at.localeCompare(left.created_at);
+  })[0] ?? null;
 }
 
 export async function syncDueStatuses() {
@@ -159,6 +195,8 @@ export async function getDailyGoalSummary() {
 }
 
 export async function getWeeklyCalendar() {
+  await syncDueStatuses();
+
   const supabase = await createServerSupabaseClient();
   const { data: plans, error: planError } = await supabase
     .from("user_root_plans")
@@ -236,6 +274,46 @@ export async function completeStudyPlan(planId: string) {
   }
 
   return data;
+}
+
+export async function completeNearestActiveStudyPlanForRootWord(rootWordId: string) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      completed: false,
+      planId: null as string | null,
+    };
+  }
+
+  const { data: plans, error } = await supabase
+    .from("user_root_plans")
+    .select("id, scheduled_date, created_at")
+    .eq("user_id", user.id)
+    .eq("root_word_id", rootWordId)
+    .in("status", [...ACTIVE_PLAN_STATUSES]);
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tải lịch học đang hoạt động");
+  }
+
+  const nearestPlan = selectNearestActivePlan((plans ?? []) as ActivePlanCandidate[]);
+  if (!nearestPlan) {
+    return {
+      completed: false,
+      planId: null as string | null,
+    };
+  }
+
+  await completeStudyPlan(nearestPlan.id);
+
+  return {
+    completed: true,
+    planId: nearestPlan.id,
+  };
 }
 
 export async function getReviewQueue() {

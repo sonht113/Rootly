@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { addDays, addWeeks, format, subWeeks } from "date-fns";
 import {
   ArrowUpRight,
@@ -10,17 +11,27 @@ import {
   CircleCheckBig,
   CircleDashed,
   Loader2,
-  PencilLine,
   Repeat2,
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent, type MouseEvent, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { createStudyPlanAction, deleteStudyPlanAction } from "@/features/study-plans/actions/plans";
 import { SchedulePlanDialog } from "@/features/study-plans/components/schedule-plan-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
@@ -53,7 +64,13 @@ interface CalendarPlannerProps {
   }>;
 }
 
-type CalendarEntryTone = "learning" | "review" | "overdue" | "done";
+type CalendarEntryTone =
+  | "learning"
+  | "review"
+  | "overdue"
+  | "done"
+  | "completedOverdue"
+  | "completedSuccess";
 type QuickAddScheduleChoice = typeof NEXT_AVAILABLE_SLOT | string;
 type QuickAddOption = {
   value: QuickAddScheduleChoice;
@@ -79,6 +96,7 @@ type CalendarEntry =
       meta: string;
       tone: CalendarEntryTone;
       title: string;
+      rootWordId: string;
       description: string;
       defaultValues: {
         id: string;
@@ -95,6 +113,7 @@ type CalendarEntry =
       meta: string;
       tone: CalendarEntryTone;
       title: string;
+      rootWordId: string;
       description: string;
     };
 
@@ -126,6 +145,18 @@ const TONE_STYLES: Record<
     icon: "text-[#93000a]",
     meta: "bg-white/70 text-[#93000a]",
     secondaryAction: "text-[#93000a] hover:bg-white/72",
+  },
+  completedOverdue: {
+    card: "border border-[#f6d36f] bg-[#fff4c2] text-[#7a5800] shadow-[0_16px_28px_rgba(184,134,11,0.16)]",
+    icon: "text-[#7a5800]",
+    meta: "bg-white/80 text-[#7a5800]",
+    secondaryAction: "text-[#7a5800] hover:bg-white/70",
+  },
+  completedSuccess: {
+    card: "border border-[#86d19a] bg-[#dff7e5] text-[#146534] shadow-[0_16px_28px_rgba(22,101,52,0.14)]",
+    icon: "text-[#146534]",
+    meta: "bg-white/75 text-[#146534]",
+    secondaryAction: "text-[#146534] hover:bg-white/72",
   },
   done: {
     card: "border border-[#dbe5f0] bg-white text-[#191c1e] shadow-[0_10px_24px_rgba(15,23,42,0.06)]",
@@ -186,6 +217,7 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
         meta: getPlanMeta(plan.source, plan.status),
         tone,
         title: plan.root_word.root,
+        rootWordId: plan.root_word.id,
         description: plan.root_word.meaning,
         defaultValues: {
           id: plan.id,
@@ -210,6 +242,7 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
         meta: `Bước ${review.review_step}`,
         tone,
         title: review.root_word.root,
+        rootWordId: review.root_word.id,
         description: review.root_word.meaning,
       };
 
@@ -308,9 +341,14 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
   }, [days, quickAddScheduleFor]);
 
   async function handleDelete(planId: string) {
-    await deleteStudyPlanAction(planId);
-    toast.success("Đã xoá lịch học");
-    router.refresh();
+    try {
+      await deleteStudyPlanAction(planId);
+      toast.success("Đã xóa lịch học");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Không thể xóa lịch học");
+      throw error;
+    }
   }
 
   function handlePrefillQuickAdd(rootWordId: string, scheduleFor: QuickAddScheduleChoice = NEXT_AVAILABLE_SLOT) {
@@ -713,13 +751,7 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
           <>
             <div className="flex flex-1 flex-col gap-3">
               {entries.map((entry) => (
-                <CalendarEntryCard
-                  key={entry.id}
-                  entry={entry}
-                  rootWords={rootWords}
-                  dateOptions={dateOptions}
-                  onDeletePlan={onDeletePlan}
-                />
+                <CalendarEntryCard key={entry.id} entry={entry} onDeletePlan={onDeletePlan} />
               ))}
             </div>
 
@@ -790,12 +822,10 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
 
 interface CalendarEntryCardProps {
   entry: CalendarEntry;
-  rootWords: Array<{ id: string; root: string; meaning: string }>;
-  dateOptions: ScheduleDialogDateOption[];
   onDeletePlan: (planId: string) => Promise<void>;
 }
 
-function CalendarEntryCard({ entry, rootWords, dateOptions, onDeletePlan }: CalendarEntryCardProps) {
+function CalendarEntryCard({ entry, onDeletePlan }: CalendarEntryCardProps) {
   const tone = TONE_STYLES[entry.tone];
 
   return (
@@ -812,40 +842,99 @@ function CalendarEntryCard({ entry, rootWords, dateOptions, onDeletePlan }: Cale
         <p className="break-words text-xs leading-4 opacity-90">{entry.description}</p>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]", tone.meta)}>
-          {entry.meta}
-        </span>
+      {entry.kind === "plan" ? (
+        <div className="mt-4 grid gap-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-full justify-center rounded-[10px]", tone.secondaryAction)}
+          >
+            <Link href={`/library/${entry.rootWordId}`}>Xem chi tiết</Link>
+          </Button>
+          <DeletePlanButton
+            planId={entry.id}
+            title={entry.title}
+            className={tone.secondaryAction}
+            onDeletePlan={onDeletePlan}
+          />
+        </div>
+      ) : (
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <span
+            className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]", tone.meta)}
+          >
+            {entry.meta}
+          </span>
 
-        {entry.kind === "plan" ? (
-          <div className="flex items-center gap-1">
-            <SchedulePlanDialog
-              rootWords={rootWords}
-              dateOptions={dateOptions}
-              defaultValues={entry.defaultValues}
-              triggerLabel=""
-              triggerVariant="ghost"
-              triggerSize="icon"
-              triggerAriaLabel={`Chỉnh sửa lịch học cho ${entry.title}`}
-              triggerIcon={<PencilLine className="size-4" />}
-              triggerClassName={cn("size-8 rounded-[10px]", tone.secondaryAction)}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className={cn("size-8 rounded-[10px]", tone.secondaryAction)}
-              aria-label={`Xóa lịch học cho ${entry.title}`}
-              onClick={() => {
-                void onDeletePlan(entry.id);
-              }}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-        ) : null}
-      </div>
+          <Button asChild variant="ghost" size="sm" className={cn("h-8 rounded-[10px] px-3", tone.secondaryAction)}>
+            <Link href={`/library/${entry.rootWordId}`}>Xem chi tiết</Link>
+          </Button>
+        </div>
+      )}
     </article>
+  );
+}
+
+interface DeletePlanButtonProps {
+  planId: string;
+  title: string;
+  className: string;
+  onDeletePlan: (planId: string) => Promise<void>;
+}
+
+function DeletePlanButton({ planId, title, className, onDeletePlan }: DeletePlanButtonProps) {
+  const [open, setOpen] = useState(false);
+  const [isDeletePending, startDeleteTransition] = useTransition();
+
+  function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+
+    startDeleteTransition(async () => {
+      try {
+        await onDeletePlan(planId);
+        setOpen(false);
+      } catch {}
+    });
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn("h-8 w-full justify-center rounded-[10px]", className)}
+          disabled={isDeletePending}
+          aria-label={`Xóa lịch học cho ${title}`}
+        >
+          {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          <span>Xóa</span>
+        </Button>
+      </AlertDialogTrigger>
+
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Xóa lịch học này?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Lịch học của từ gốc <strong>{title}</strong> sẽ bị xóa khỏi lịch tuần hiện tại. Bạn có thể thêm lại sau.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeletePending}>Hủy</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-[color:var(--danger)] text-white hover:opacity-90"
+            disabled={isDeletePending}
+            onClick={handleConfirm}
+          >
+            {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : null}
+            Xóa
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -859,6 +948,8 @@ function getEntryIcon(entry: CalendarEntry) {
       return <Repeat2 className={iconClassName} />;
     case "overdue":
       return <CircleAlert className={iconClassName} />;
+    case "completedOverdue":
+    case "completedSuccess":
     case "done":
       return <CircleCheckBig className={iconClassName} />;
     default:
@@ -867,7 +958,11 @@ function getEntryIcon(entry: CalendarEntry) {
 }
 
 function getPlanTone(status: string, dateKey: string, todayKey: string): CalendarEntryTone {
-  if (status === "completed" || status === "skipped") {
+  if (status === "completed") {
+    return dateKey < todayKey ? "completedOverdue" : "completedSuccess";
+  }
+
+  if (status === "skipped") {
     return "done";
   }
 
@@ -895,12 +990,12 @@ function getPlanLabel(status: string, tone: CalendarEntryTone) {
     return "Quá hạn";
   }
 
-  if (status === "in_progress") {
-    return "Đang học";
+  if (tone === "completedOverdue" || tone === "completedSuccess") {
+    return "Đã hoàn thành";
   }
 
-  if (status === "completed") {
-    return "Hoàn tất";
+  if (status === "in_progress") {
+    return "Đang học";
   }
 
   if (status === "skipped") {
@@ -928,7 +1023,7 @@ function getReviewLabel(status: string, tone: CalendarEntryTone) {
 
 function getPlanMeta(source: string, status: string) {
   if (status === "completed") {
-    return "Đã hoàn tất";
+    return "Đã hoàn thành";
   }
 
   if (status === "in_progress") {
@@ -957,10 +1052,13 @@ function getToneOrder(tone: CalendarEntryTone) {
       return 1;
     case "review":
       return 2;
-    case "done":
+    case "completedOverdue":
+    case "completedSuccess":
       return 3;
-    default:
+    case "done":
       return 4;
+    default:
+      return 5;
   }
 }
 
