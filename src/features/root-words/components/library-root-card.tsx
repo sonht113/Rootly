@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { RootLearningStatusBadge } from "@/features/root-words/components/root-learning-status-badge";
 import { cn } from "@/lib/utils/cn";
 import type { LibraryRootWord } from "@/server/repositories/root-words-repository";
 
@@ -36,6 +37,7 @@ export function LibraryRootCard({
             {rootWord.root}
           </h2>
           <p className="text-base font-medium leading-6 text-[#424754]">{rootWord.originLabel}</p>
+          <RootLearningStatusBadge status={rootWord.learningStatus} className="mt-2" />
         </div>
 
         <div className="text-right">

@@ -41,6 +41,28 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
   });
 
+  it("hides the roots item for students", () => {
+    mockedUsePathname.mockReturnValue("/today");
+
+    render(<AppSidebarNav role="student" />);
+
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"))
+      .filter((href): href is string => Boolean(href));
+
+    expect(hrefs).not.toContain("/roots");
+    expect(screen.queryByRole("link", { name: "Gốc từ" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the roots item visible for teachers", () => {
+    mockedUsePathname.mockReturnValue("/today");
+
+    render(<AppSidebarNav role="teacher" />);
+
+    expect(screen.getByRole("link", { name: "Gốc từ" })).toHaveAttribute("href", "/roots");
+  });
+
   it("keeps the parent item active for nested teacher routes", () => {
     mockedUsePathname.mockReturnValue("/teacher/classes/123");
 
