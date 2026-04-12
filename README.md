@@ -112,6 +112,7 @@ Danh sách migration hiện tại:
 - `20260411193000_extend_quiz_question_type.sql`
 - `20260411194000_add_root_word_quiz_sets.sql`
 - `20260411223000_add_ranking_insights_rpc.sql`
+- `20260412120413_record_root_word_detail_view.sql`
 
 Migration cuối cùng `20260411223000_add_ranking_insights_rpc.sql` là cần thiết để màn hình xếp hạng hoạt động đúng phần insight và activity comparison.
 

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { deriveRootLearningStatus, type RootLearningStatus } from "@/lib/root-learning-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { RootWordDetail, RootWordRow } from "@/types/domain";
 import type { RootWordInput } from "@/lib/validations/root-words";
@@ -35,6 +36,7 @@ export interface LibraryRootWord extends RootWordRow {
   moreWordsCount: number;
   originLabel: string;
   masteryProgress: number;
+  learningStatus: RootLearningStatus;
 }
 
 function formatOriginLabel(rootWord: Pick<RootWordRow, "meaning" | "description">) {
@@ -145,9 +147,11 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
   return baseRootWords.map((rootWord) => {
     const relatedWords = wordsByRootId.get(rootWord.id) ?? [];
     const previewWords = relatedWords.slice(0, 3);
+    const plansForRoot = plansByRootId.get(rootWord.id) ?? [];
+    const reviewsForRoot = reviewsByRootId.get(rootWord.id) ?? [];
     const masteryProgress = calculateMasteryProgress(
-      plansByRootId.get(rootWord.id) ?? [],
-      reviewsByRootId.get(rootWord.id) ?? [],
+      plansForRoot,
+      reviewsForRoot,
     );
 
     return {
@@ -157,6 +161,7 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
       moreWordsCount: Math.max(0, relatedWords.length - previewWords.length),
       originLabel: formatOriginLabel(rootWord),
       masteryProgress,
+      learningStatus: deriveRootLearningStatus(plansForRoot, reviewsForRoot),
     };
   });
 }

@@ -22,7 +22,6 @@ export const navigationByRole: Record<AppRole, AppNavigationItem[]> = {
   student: [
     { href: "/today", label: "Hôm nay", icon: LayoutDashboard },
     { href: "/library", label: "Thư viện", icon: BookOpenText },
-    { href: "/roots", label: "Gốc từ", icon: Languages },
     { href: "/calendar", label: "Lịch học", icon: CalendarDays },
     { href: "/reviews", label: "Ôn tập", icon: GraduationCap },
     { href: "/progress", label: "Tiến độ", icon: ChartSpline },
