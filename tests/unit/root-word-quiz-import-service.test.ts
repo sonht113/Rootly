@@ -1,36 +1,39 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { parseRootWordQuizImportFile } from "@/server/services/root-word-quiz-import-service";
 
-describe("root word quiz import service", () => {
-  it("parses a valid mixed quiz CSV", async () => {
-    const csv = [
-      "Question Type,Question,Correct Answer,Explanation,Option A,Option B,Option C,Option D",
-      'multiple_choice,"Root ""port"" gần nhất với nghĩa nào?",mang; vận chuyển,"port liên quan đến việc mang hoặc vận chuyển.",mang; vận chuyển,nhìn; xem,viết,nói; ra lệnh',
-      'text,"Viết một từ thuộc root ""port"" có nghĩa là ""hộ chiếu"".",passport,"passport là đáp án mẫu phù hợp.",,,,',
-    ].join("\n");
+const QUIZ_SAMPLE_DIR = path.join(process.cwd(), "public", "templates", "quiz-import");
+const QUIZ_SAMPLE_FILES = [
+  "quiz-import-template.csv",
+  "quiz-spect.csv",
+  "quiz-port.csv",
+  "quiz-cred.csv",
+  "quiz-dict.csv",
+] as const;
 
-    const file = new File([csv], "quiz-import.csv", { type: "text/csv" });
-    const result = await parseRootWordQuizImportFile(file);
+async function parseFixture(fileName: string) {
+  const csv = await readFile(path.join(QUIZ_SAMPLE_DIR, fileName), "utf8");
+  const file = new File([csv], fileName, { type: "text/csv" });
+  return parseRootWordQuizImportFile(file);
+}
+
+describe("root word quiz import service", () => {
+  it.each(QUIZ_SAMPLE_FILES)("parses sample quiz CSV %s with 10 valid questions", async (fileName) => {
+    const result = await parseFixture(fileName);
 
     expect(result.invalid).toHaveLength(0);
-    expect(result.valid).toHaveLength(2);
-    expect(result.valid[0]?.question_type).toBe("multiple_choice");
-    expect(result.valid[1]?.question_type).toBe("text");
+    expect(result.valid).toHaveLength(10);
   });
 
-  it("preserves UTF-8 Vietnamese content", async () => {
-    const csv = [
-      "Question Type,Question,Correct Answer,Explanation,Option A,Option B,Option C,Option D",
-      'multiple_choice,"Root ""cred"" gần nhất với nghĩa nào?",tin; tín nhiệm,"cred liên quan đến niềm tin và tín nhiệm.",tin; tín nhiệm,ném; quăng,xây dựng,nhìn; xem',
-    ].join("\n");
-
-    const file = new File([csv], "quiz-import-vi.csv", { type: "text/csv" });
-    const result = await parseRootWordQuizImportFile(file);
+  it("preserves UTF-8 Vietnamese content in fixture files", async () => {
+    const result = await parseFixture("quiz-cred.csv");
 
     expect(result.invalid).toHaveLength(0);
-    expect(result.valid[0]?.correct_answer).toBe("tin; tín nhiệm");
-    expect(result.valid[0]?.option_a).toBe("tin; tín nhiệm");
+    expect(result.valid[6]?.prompt).toContain("đáng tin");
+    expect(result.valid[7]?.explanation).toContain("sự tin tưởng");
   });
 
   it("reports missing headers clearly", async () => {
