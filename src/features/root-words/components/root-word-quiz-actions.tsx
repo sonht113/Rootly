@@ -3,10 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileSpreadsheet, Loader2, PlayCircle, PlusCircle, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type MouseEvent } from "react";
 import { toast } from "sonner";
 
 import { UploadDropzone } from "@/components/shared/upload-dropzone";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { RootWordQuizQuestionInput } from "@/lib/validations/root-word-quizzes";
+import { cn } from "@/lib/utils/cn";
 
 interface QuizImportPreviewResult {
   valid: RootWordQuizQuestionInput[];
@@ -43,6 +55,13 @@ const QUIZ_IMPORT_COLUMNS = [
   "Option D",
 ] as const;
 
+const QUIZ_IMPORT_SAMPLE_FILES = [
+  { root: "spect", fileName: "quiz-spect.csv" },
+  { root: "port", fileName: "quiz-port.csv" },
+  { root: "cred", fileName: "quiz-cred.csv" },
+  { root: "dict", fileName: "quiz-dict.csv" },
+] as const;
+
 export function RootWordQuizActions({
   rootWordId,
   rootWordLabel,
@@ -51,7 +70,9 @@ export function RootWordQuizActions({
   canManageQuiz,
 }: RootWordQuizActionsProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const normalizedRootLabel = rootWordLabel.trim().toLowerCase();
+  const [importOpen, setImportOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<QuizImportPreviewResult | null>(null);
   const [isPreviewPending, startPreviewTransition] = useTransition();
@@ -63,8 +84,8 @@ export function RootWordQuizActions({
     setPreview(null);
   }
 
-  function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
+  function handleImportOpenChange(nextOpen: boolean) {
+    setImportOpen(nextOpen);
     if (!nextOpen) {
       resetState();
     }
@@ -129,16 +150,13 @@ export function RootWordQuizActions({
       }
 
       toast.success(`Đã nhập ${result.importedCount ?? 0} câu quiz cho từ gốc "${rootWordLabel}".`);
-      handleOpenChange(false);
+      handleImportOpenChange(false);
       router.refresh();
     });
   }
 
-  function handleDelete() {
-    const confirmed = window.confirm(`Xóa bộ quiz hiện tại của từ gốc "${rootWordLabel}" để có thể nhập lại?`);
-    if (!confirmed) {
-      return;
-    }
+  function handleDeleteConfirm(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
 
     startDeleteTransition(async () => {
       const response = await fetch(`/api/root-word-quizzes/${rootWordId}`, {
@@ -151,6 +169,7 @@ export function RootWordQuizActions({
         return;
       }
 
+      setDeleteOpen(false);
       toast.success(
         result.deletedCount ? `Đã xóa quiz của từ gốc "${rootWordLabel}".` : `Từ gốc "${rootWordLabel}" hiện chưa có quiz để xóa.`,
       );
@@ -175,12 +194,10 @@ export function RootWordQuizActions({
         </Button>
       ) : null}
 
-      {hasQuiz ? (
-        <p className="text-xs text-[color:var(--muted-foreground)]">{questionCount} câu quiz đã sẵn sàng cho từ gốc này.</p>
-      ) : null}
+      {hasQuiz ? <p className="text-xs text-[color:var(--muted-foreground)]">{questionCount} câu quiz đã sẵn sàng cho từ gốc này.</p> : null}
 
       {canManageQuiz && !hasQuiz ? (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={importOpen} onOpenChange={handleImportOpenChange}>
           <DialogTrigger asChild>
             <Button className="w-full justify-between bg-[#0058be] text-white hover:bg-[#004ca6]">
               Thêm quiz
@@ -194,7 +211,7 @@ export function RootWordQuizActions({
                 Nhập quiz bằng CSV
               </DialogTitle>
               <DialogDescription className="text-base leading-[1.625rem] text-[#424754]">
-                Tải file CSV để thêm khoảng 10 câu quiz cho từ gốc "{rootWordLabel}".
+                Tải file CSV để thêm ít nhất 10 câu quiz cho từ gốc <strong>{rootWordLabel}</strong>.
               </DialogDescription>
             </DialogHeader>
 
@@ -213,7 +230,8 @@ export function RootWordQuizActions({
                   Yêu cầu định dạng CSV
                 </div>
                 <p className="mt-3 text-sm leading-5 text-[#424754]">
-                  Kích thước khuyến nghị là <strong>10 câu hỏi cho mỗi từ gốc</strong>. CSV phải có đúng các cột sau:
+                  Với bộ root word mẫu hiện tại, mỗi file nên có <strong>ít nhất 10 câu hỏi</strong> để ôn đủ 10 từ vựng.
+                  CSV phải có đúng các cột sau:
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {QUIZ_IMPORT_COLUMNS.map((column) => (
@@ -251,21 +269,51 @@ export function RootWordQuizActions({
             </div>
 
             <div className="flex flex-col gap-4 bg-[#f2f4f6] px-8 py-6 sm:flex-row sm:items-center sm:justify-between">
-              <Link
-                href="/templates/quiz-import/quiz-import-template.csv"
-                download
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#0058be]"
-              >
-                <FileSpreadsheet className="size-4" />
-                Tải template mẫu
-              </Link>
+              <div className="space-y-3">
+                <Link
+                  href="/templates/quiz-import/quiz-import-template.csv"
+                  download
+                  className="inline-flex items-center gap-2 text-sm font-medium text-[#0058be]"
+                >
+                  <FileSpreadsheet className="size-4" />
+                  Tải template chung
+                </Link>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold tracking-[0.08em] text-[#5e6472] uppercase">
+                    File mẫu theo root word
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {QUIZ_IMPORT_SAMPLE_FILES.map((sample) => {
+                      const isCurrentRoot = sample.root === normalizedRootLabel;
+
+                      return (
+                        <Link
+                          key={sample.fileName}
+                          href={`/templates/quiz-import/${sample.fileName}`}
+                          download
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                            isCurrentRoot
+                              ? "border-[#0058be] bg-[#e8f1ff] text-[#0058be]"
+                              : "border-[#c2c6d6] bg-white text-[#424754] hover:border-[#0058be] hover:text-[#0058be]",
+                          )}
+                        >
+                          <FileSpreadsheet className="size-3.5" />
+                          {isCurrentRoot ? `${sample.root} (root hiện tại)` : sample.root}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
 
               <div className="flex gap-4">
                 <Button
                   type="button"
                   variant="outline"
                   className="h-10 rounded-[8px] px-4 text-sm font-medium text-[#424754]"
-                  onClick={() => handleOpenChange(false)}
+                  onClick={() => handleImportOpenChange(false)}
                   disabled={isPreviewPending || isImportPending}
                 >
                   Hủy
@@ -286,16 +334,41 @@ export function RootWordQuizActions({
       ) : null}
 
       {canManageQuiz && hasQuiz ? (
-        <Button
-          type="button"
-          variant="danger"
-          className="w-full justify-between"
-          onClick={handleDelete}
-          disabled={isDeletePending}
-        >
-          {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-          Xóa quiz
-        </Button>
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="danger"
+              className="w-full justify-between"
+              disabled={isDeletePending}
+            >
+              {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              Xóa quiz
+            </Button>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa bộ quiz hiện tại?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bộ quiz của từ gốc <strong>{rootWordLabel}</strong> sẽ bị xóa khỏi hệ thống. Sau đó bạn vẫn có thể nhập lại
+                một bộ quiz mới cho root word này.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletePending}>Hủy</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-[color:var(--danger)] text-white hover:opacity-90"
+                disabled={isDeletePending}
+                onClick={handleDeleteConfirm}
+              >
+                {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : null}
+                Xóa quiz
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : null}
     </div>
   );
