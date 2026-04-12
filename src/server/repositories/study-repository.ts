@@ -7,13 +7,14 @@ import type { ProgressSummaryData, TodayDashboardData, UserRootPlanRow, UserRoot
 import { unwrapSupabaseError } from "@/server/repositories/shared";
 
 const ACTIVE_PLAN_STATUSES = ["planned", "overdue", "in_progress"] as const;
+const ACTIVE_REVIEW_STATUSES = ["pending", "rescheduled"] as const;
+const DETAIL_REVIEW_STATUSES = ["pending", "rescheduled", "done"] as const;
 
 interface ActivePlanCandidate {
   id: string;
   scheduled_date: string;
   created_at: string;
-const ACTIVE_REVIEW_STATUSES = ["pending", "rescheduled"] as const;
-const DETAIL_REVIEW_STATUSES = ["pending", "rescheduled", "done"] as const;
+}
 
 export interface ReviewCardItem {
   id: string;
@@ -66,6 +67,8 @@ function selectNearestActivePlan(plans: ActivePlanCandidate[]) {
 
     return right.created_at.localeCompare(left.created_at);
   })[0] ?? null;
+}
+
 function formatReviewDueLabel(reviewDateString: string) {
   const todayString = getLocalTodayDateString();
   if (reviewDateString === todayString) {
