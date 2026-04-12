@@ -52,8 +52,10 @@ describe("quiz service", () => {
       quizSetId: "quiz-set-1",
       questionType: "multiple_choice",
       prompt: "Root \"spect\" gần nhất với nghĩa nào?",
+      correctAnswer: "nhìn; xem",
       options: ["nhìn; xem", "nói; ra lệnh", "viết", "mang; vận chuyển"],
     });
+    expect(questions[1]?.correctAnswer).toBe("inspect");
     expect(questions[1]?.options).toBeUndefined();
   });
 
