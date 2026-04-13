@@ -3,22 +3,35 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockedGetCurrentProfile,
+  mockedGetRootLearningSnapshot,
   mockedGetRootWordDetail,
   mockedGetRootWordQuizSummary,
   mockedGetRootWordReviewContext,
 } = vi.hoisted(() => ({
   mockedGetCurrentProfile: vi.fn(),
+  mockedGetRootLearningSnapshot: vi.fn(),
   mockedGetRootWordDetail: vi.fn(),
   mockedGetRootWordQuizSummary: vi.fn(),
   mockedGetRootWordReviewContext: vi.fn(),
 }));
 
-vi.mock("@/components/shared/page-header", () => ({
-  PageHeader: ({ title }: { title: string }) => <h1>{title}</h1>,
+vi.mock("@/features/root-words/components/root-artifact-hero", () => ({
+  RootArtifactHero: ({ rootWord }: { rootWord: { root: string } }) => <div>{rootWord.root}</div>,
 }));
 
 vi.mock("@/features/root-words/components/root-word-detail-sections", () => ({
-  RootWordDetailSections: ({ rootWord }: { rootWord: { root: string } }) => <div>{rootWord.root}</div>,
+  RootWordDetailSections: ({
+    rootWord,
+    summaryAction,
+  }: {
+    rootWord: { root: string };
+    summaryAction?: React.ReactNode;
+  }) => (
+    <div>
+      <div>{rootWord.root}</div>
+      {summaryAction}
+    </div>
+  ),
 }));
 
 vi.mock("@/features/root-words/components/root-word-quiz-actions", () => ({
@@ -27,10 +40,6 @@ vi.mock("@/features/root-words/components/root-word-quiz-actions", () => ({
 
 vi.mock("@/features/root-words/components/root-word-review-actions", () => ({
   RootWordReviewActions: () => <div>review-actions</div>,
-}));
-
-vi.mock("@/features/study-plans/components/schedule-plan-dialog", () => ({
-  SchedulePlanDialog: () => <div>schedule-dialog</div>,
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -46,18 +55,25 @@ vi.mock("@/server/repositories/root-word-quizzes-repository", () => ({
 }));
 
 vi.mock("@/server/repositories/study-repository", () => ({
+  getRootLearningSnapshot: mockedGetRootLearningSnapshot,
   getRootWordReviewContext: mockedGetRootWordReviewContext,
 }));
 
-import RootWordDetailPage from "@/app/(student)/library/[rootId]/page";
+import RootArtifactPage from "@/app/(student)/roots/[rootId]/page";
 
-describe("student library root detail page", () => {
+describe("student root artifact page", () => {
   beforeEach(() => {
-    mockedGetRootWordDetail.mockReset();
     mockedGetCurrentProfile.mockReset();
+    mockedGetRootLearningSnapshot.mockReset();
+    mockedGetRootWordDetail.mockReset();
     mockedGetRootWordQuizSummary.mockReset();
     mockedGetRootWordReviewContext.mockReset();
 
+    mockedGetRootLearningSnapshot.mockResolvedValue({
+      hasPlan: true,
+      nextReviewDate: null,
+      nextReviewText: "next review text",
+    });
     mockedGetRootWordDetail.mockResolvedValue({
       id: "root-1",
       root: "spect",
@@ -72,23 +88,14 @@ describe("student library root detail page", () => {
     mockedGetRootWordReviewContext.mockResolvedValue(null);
   });
 
-  it("renders detail for student visitors without tracking a study session", async () => {
+  it("renders the artifact detail without recording a study session", async () => {
     mockedGetCurrentProfile.mockResolvedValue({
       role: "student",
     });
 
-    render(await RootWordDetailPage({ params: Promise.resolve({ rootId: "root-1" }) }));
+    render(await RootArtifactPage({ params: Promise.resolve({ rootId: "root-1" }) }));
 
-    expect(screen.getByRole("heading", { name: "spect" })).toBeInTheDocument();
-  });
-
-  it("renders detail for non-student visitors without tracking a study session", async () => {
-    mockedGetCurrentProfile.mockResolvedValue({
-      role: "admin",
-    });
-
-    render(await RootWordDetailPage({ params: Promise.resolve({ rootId: "root-1" }) }));
-
-    expect(screen.getByRole("heading", { name: "spect" })).toBeInTheDocument();
+    expect(screen.getAllByText("spect")).not.toHaveLength(0);
+    expect(screen.getByText("quiz-actions")).toBeInTheDocument();
   });
 });

@@ -53,10 +53,10 @@ export function LibrarySpotlightCard({ rootWord, className }: LibrarySpotlightCa
 
         <div className="mt-auto pt-8">
           <Link
-            href={`/library/${rootWord.id}`}
-            className="inline-flex h-12 items-center gap-3 rounded-[12px] bg-white px-6 text-base font-semibold text-[#006c49] transition-colors hover:bg-[#f2fff8]"
+            href={rootWord.ctaHref}
+            className="inline-flex h-12 items-center gap-3 rounded-[12px] bg-white/16 px-6 text-base font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/24"
           >
-            Học nhanh
+            {rootWord.ctaLabel}
             <ArrowRight className="size-4" />
           </Link>
         </div>

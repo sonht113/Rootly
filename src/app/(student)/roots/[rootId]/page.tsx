@@ -1,4 +1,3 @@
-import { RefreshOnMount } from "@/components/shared/refresh-on-mount";
 import { RootArtifactHero } from "@/features/root-words/components/root-artifact-hero";
 import { RootWordDetailSections } from "@/features/root-words/components/root-word-detail-sections";
 import { RootWordQuizActions } from "@/features/root-words/components/root-word-quiz-actions";
@@ -6,7 +5,7 @@ import { RootWordReviewActions } from "@/features/root-words/components/root-wor
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getRootWordDetail } from "@/server/repositories/root-words-repository";
 import { getRootWordQuizSummary } from "@/server/repositories/root-word-quizzes-repository";
-import { getRootLearningSnapshot, getRootWordReviewContext, recordRootWordDetailView } from "@/server/repositories/study-repository";
+import { getRootLearningSnapshot, getRootWordReviewContext } from "@/server/repositories/study-repository";
 
 export default async function RootArtifactPage({
   params,
@@ -27,15 +26,11 @@ export default async function RootArtifactPage({
     getRootWordQuizSummary(rootId),
     reviewId ? getRootWordReviewContext(rootId, reviewId) : Promise.resolve(null),
   ]);
-  const detailViewResult =
-    profile?.role === "student" ? await recordRootWordDetailView(rootId) : { recorded: false, sessionId: null };
-
   const canManageQuiz = profile?.role === "admin" || profile?.role === "teacher";
   const hasSummaryAction = Boolean(reviewContext) || quizSummary.hasQuiz || canManageQuiz;
 
   return (
     <div className="space-y-8">
-      <RefreshOnMount enabled={detailViewResult.recorded} />
       <RootArtifactHero rootWord={rootWord} nextReviewText={snapshot.nextReviewText} />
       <RootWordDetailSections
         rootWord={rootWord}

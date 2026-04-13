@@ -860,15 +860,14 @@ function CalendarEntryCard({ entry, onDeletePlan }: CalendarEntryCardProps) {
           />
         </div>
       ) : (
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <span
-            className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]", tone.meta)}
+        <div className="mt-4">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className={cn("h-8 w-full justify-center rounded-[10px]", tone.secondaryAction)}
           >
-            {entry.meta}
-          </span>
-
-          <Button asChild variant="ghost" size="sm" className={cn("h-8 rounded-[10px] px-3", tone.secondaryAction)}>
-            <Link href={`/library/${entry.rootWordId}`}>Xem chi tiết</Link>
+            <Link href={`/library/${entry.rootWordId}?reviewId=${entry.id}`}>Ôn tập</Link>
           </Button>
         </div>
       )}

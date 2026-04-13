@@ -1,14 +1,28 @@
 import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, Flame, Sparkles, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronRight,
+  Flame,
+  Sparkles,
+  Trophy,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils/cn";
-import type { ReviewHighlightItem, TodayDashboardViewModel } from "@/features/today-dashboard/types";
+import type {
+  ReviewHighlightItem,
+  TodayDashboardViewModel,
+} from "@/features/today-dashboard/types";
 
 function HeroIllustration() {
   return (
-    <svg viewBox="0 0 160 120" aria-hidden="true" className="h-24 w-auto text-slate-900 md:h-28">
+    <svg
+      viewBox="0 0 160 120"
+      aria-hidden="true"
+      className="h-24 w-auto text-slate-900 md:h-28"
+    >
       <path
         d="M34 24c0-6.6 5.4-12 12-12h56c16.6 0 30 13.4 30 30v44c0 12.2-9.8 22-22 22H46c-6.6 0-12-5.4-12-12V24Z"
         fill="currentColor"
@@ -37,7 +51,11 @@ function HeroIllustration() {
 
 function ScholarPenIllustration() {
   return (
-    <svg viewBox="0 0 120 120" aria-hidden="true" className="h-24 w-24 text-white/80">
+    <svg
+      viewBox="0 0 120 120"
+      aria-hidden="true"
+      className="h-24 w-24 text-white/80"
+    >
       <path
         d="M76 14 104 42 58 88 34 94l6-24 36-56Z"
         fill="none"
@@ -46,8 +64,20 @@ function ScholarPenIllustration() {
         strokeLinejoin="round"
         strokeWidth="8"
       />
-      <path d="M70 22 96 48" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="8" />
-      <path d="M30 100c11-8 21-12 32-14" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="8" />
+      <path
+        d="M70 22 96 48"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="8"
+      />
+      <path
+        d="M30 100c11-8 21-12 32-14"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="8"
+      />
     </svg>
   );
 }
@@ -60,10 +90,23 @@ function ReviewToneBadge({ item }: { item: ReviewHighlightItem }) {
         ? "bg-[#ffdbca] text-[#783200]"
         : "bg-[#d8e2ff] text-[#004395]";
 
-  return <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.12em]", toneClasses)}>{item.statusLabel}</span>;
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.12em]",
+        toneClasses,
+      )}
+    >
+      {item.statusLabel}
+    </span>
+  );
 }
 
-export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboardViewModel }) {
+export function StudentTodayDashboard({
+  viewModel,
+}: {
+  viewModel: TodayDashboardViewModel;
+}) {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_245px]">
@@ -71,16 +114,25 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
           <h1 className="[font-family:var(--font-display)] text-4xl font-extrabold tracking-[-0.03em] text-[#191c1e] md:text-5xl md:leading-[1.02]">
             {viewModel.hero.title}
           </h1>
-          <p className="max-w-2xl text-base leading-8 text-[#424754] md:text-lg">{viewModel.hero.description}</p>
+          <p className="max-w-2xl text-base leading-8 text-[#424754] md:text-lg">
+            {viewModel.hero.description}
+          </p>
         </div>
 
         <div className="rounded-[20px] bg-[#f2f4f6] p-4">
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
             <div className="space-y-2">
-              <p className="text-xs font-bold tracking-[0.14em] text-[#424754]">{viewModel.summary.dailyGoal.label}</p>
+              <p className="text-xs font-bold tracking-[0.14em] text-[#424754]">
+                {viewModel.summary.dailyGoal.label}
+              </p>
               <div className="flex items-center gap-3">
-                <Progress value={viewModel.summary.dailyGoal.percentage} className="h-2 bg-[#e0e3e5]" />
-                <span className="text-sm font-bold text-[#994100]">{viewModel.summary.dailyGoal.displayValue}</span>
+                <Progress
+                  value={viewModel.summary.dailyGoal.percentage}
+                  className="h-2 bg-[#e0e3e5]"
+                />
+                <span className="text-sm font-bold text-[#994100]">
+                  {viewModel.summary.dailyGoal.displayValue}
+                </span>
               </div>
             </div>
 
@@ -91,8 +143,12 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
                 <Trophy className="size-4" />
               </div>
               <div>
-                <p className="text-xs font-bold tracking-[0.14em] text-[#424754]">{viewModel.summary.rank.label}</p>
-                <p className="text-sm font-bold leading-5 text-[#191c1e]">{viewModel.summary.rank.value}</p>
+                <p className="text-xs font-bold tracking-[0.14em] text-[#424754]">
+                  {viewModel.summary.rank.label}
+                </p>
+                <p className="text-sm font-bold leading-5 text-[#191c1e]">
+                  {viewModel.summary.rank.value}
+                </p>
               </div>
             </div>
           </div>
@@ -105,15 +161,21 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
             <div className="flex size-10 items-center justify-center rounded-full bg-[#ffdad6] text-[#ba1a1a]">
               <Flame className="size-4" />
             </div>
-            <p className="text-sm font-medium text-[#7f1d1d]">{viewModel.overdueBanner.label}</p>
+            <p className="text-sm font-medium text-[#7f1d1d]">
+              {viewModel.overdueBanner.label}
+            </p>
           </div>
-          <Button asChild variant="outline" className="rounded-[12px] border-[#f3c4bf] bg-white">
+          <Button
+            asChild
+            variant="outline"
+            className="rounded-[12px] border-[#f3c4bf] bg-white"
+          >
             <Link href={viewModel.overdueBanner.href}>Mở lịch học</Link>
           </Button>
         </div>
       ) : null}
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,629px)_minmax(0,299px)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_399px]">
         <div className="space-y-6">
           <div className="overflow-hidden rounded-[32px] border border-[color:var(--border)] bg-white p-6 shadow-[var(--shadow-soft)] md:p-8">
             <div className="flex flex-col gap-8">
@@ -122,7 +184,9 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
                   <span
                     className={cn(
                       "inline-flex rounded-full px-4 py-1.5 text-xs font-bold tracking-[0.16em]",
-                      viewModel.learningCard.source === "overdue" ? "bg-[#ffdad6] text-[#93000a]" : "bg-[#6cf8bb] text-[#00714d]",
+                      viewModel.learningCard.source === "overdue"
+                        ? "bg-[#ffdad6] text-[#93000a]"
+                        : "bg-[#6cf8bb] text-[#00714d]",
                     )}
                   >
                     {viewModel.learningCard.badgeLabel}
@@ -131,13 +195,18 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
                     <h2 className="[font-family:var(--font-display)] text-5xl font-extrabold lowercase tracking-[-0.05em] text-[#0058be]">
                       {viewModel.learningCard.title}
                     </h2>
-                    <p className="max-w-xl text-base leading-7 text-[#424754]">{viewModel.learningCard.supportText}</p>
+                    <p className="max-w-xl text-base leading-7 text-[#424754]">
+                      {viewModel.learningCard.supportText}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-start gap-4 md:items-end">
                   <HeroIllustration />
-                  <Button asChild className="h-14 rounded-[14px] bg-[#0058be] px-6 text-base font-bold shadow-none hover:bg-[#004395]">
+                  <Button
+                    asChild
+                    className="h-14 rounded-[14px] bg-[#0058be] px-6 text-base font-bold shadow-none hover:bg-[#004395]"
+                  >
                     <Link href={viewModel.learningCard.ctaHref}>
                       {viewModel.learningCard.ctaLabel}
                       <ArrowRight className="size-4" />
@@ -149,14 +218,21 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
               {viewModel.learningCard.words.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   {viewModel.learningCard.words.map((word) => (
-                    <div key={`${word.order}-${word.word}`} className="rounded-[18px] bg-[#f2f4f6] p-5">
+                    <div
+                      key={`${word.order}-${word.word}`}
+                      className="rounded-[18px] bg-[#f2f4f6] p-5"
+                    >
                       <div className="flex items-start gap-4">
                         <div className="flex size-9 items-center justify-center rounded-[10px] bg-white text-sm font-bold text-[#0058be] shadow-sm">
                           {word.order}
                         </div>
                         <div className="space-y-1">
-                          <h3 className="text-base font-bold text-[#191c1e]">{word.word}</h3>
-                          <p className="text-sm leading-6 text-[#424754]">{word.meaning}</p>
+                          <h3 className="text-base font-bold text-[#191c1e]">
+                            {word.word}
+                          </h3>
+                          <p className="text-sm leading-6 text-[#424754]">
+                            {word.meaning}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -171,16 +247,26 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
               <div key={stat.label} className="rounded-[24px] bg-[#f2f4f6] p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs font-bold tracking-[0.16em] text-[#424754]">{stat.label}</p>
-                    <p className="[font-family:var(--font-display)] text-4xl font-extrabold text-[#191c1e]">{stat.value}</p>
+                    <p className="text-xs font-bold tracking-[0.16em] text-[#424754]">
+                      {stat.label}
+                    </p>
+                    <p className="[font-family:var(--font-display)] text-4xl font-extrabold text-[#191c1e]">
+                      {stat.value}
+                    </p>
                   </div>
                   <div
                     className={cn(
                       "flex size-12 items-center justify-center rounded-[16px]",
-                      stat.tone === "success" ? "bg-[#6cf8bb] text-[#00714d]" : "bg-[#d8e2ff] text-[#004395]",
+                      stat.tone === "success"
+                        ? "bg-[#6cf8bb] text-[#00714d]"
+                        : "bg-[#d8e2ff] text-[#004395]",
                     )}
                   >
-                    {stat.tone === "success" ? <Check className="size-5" /> : <Sparkles className="size-5" />}
+                    {stat.tone === "success" ? (
+                      <Check className="size-5" />
+                    ) : (
+                      <Sparkles className="size-5" />
+                    )}
                   </div>
                 </div>
               </div>
@@ -191,14 +277,21 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
         <div className="space-y-6">
           <div className="rounded-[32px] border border-[color:var(--border)] bg-white p-6 shadow-[var(--shadow-soft)]">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="[font-family:var(--font-display)] text-2xl font-bold text-[#191c1e]">{viewModel.reviews.title}</h2>
-              <Link href={viewModel.reviews.viewAllHref} className="text-xs font-bold text-[#0058be]">
+              <h2 className="[font-family:var(--font-display)] text-2xl font-bold text-[#191c1e]">
+                {viewModel.reviews.title}
+              </h2>
+              <Link
+                href={viewModel.reviews.viewAllHref}
+                className="text-xs font-bold text-[#0058be]"
+              >
                 Xem tất cả
               </Link>
             </div>
 
             {viewModel.reviews.items.length === 0 ? (
-              <p className="mt-6 text-sm leading-6 text-[#64748b]">{viewModel.reviews.emptyMessage}</p>
+              <p className="mt-6 text-sm leading-6 text-[#64748b]">
+                {viewModel.reviews.emptyMessage}
+              </p>
             ) : (
               <div className="mt-6 space-y-4">
                 {viewModel.reviews.items.map((item) => (
@@ -219,10 +312,14 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-bold lowercase text-[#191c1e]">{item.root}</p>
+                          <p className="text-sm font-bold lowercase text-[#191c1e]">
+                            {item.root}
+                          </p>
                           <ReviewToneBadge item={item} />
                         </div>
-                        <p className="mt-1 text-xs leading-5 text-[#424754]">{item.subtitle}</p>
+                        <p className="mt-1 text-xs leading-5 text-[#424754]">
+                          {item.subtitle}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -245,12 +342,16 @@ export function StudentTodayDashboard({ viewModel }: { viewModel: TodayDashboard
           <div className="relative overflow-hidden rounded-[32px] bg-[#0058be] p-6 text-white shadow-[var(--shadow-soft)]">
             <div className="relative z-10 space-y-6">
               <div className="space-y-3">
-                <p className="text-xs font-semibold tracking-[0.16em] text-white/80">{viewModel.insight.eyebrow}</p>
+                <p className="text-xs font-semibold tracking-[0.16em] text-white/80">
+                  {viewModel.insight.eyebrow}
+                </p>
                 <div className="space-y-3">
                   <h2 className="[font-family:var(--font-display)] max-w-[18rem] text-2xl font-bold leading-[1.35]">
                     {viewModel.insight.quote}
                   </h2>
-                  <p className="text-sm text-white/80">{viewModel.insight.author}</p>
+                  <p className="text-sm text-white/80">
+                    {viewModel.insight.author}
+                  </p>
                 </div>
               </div>
 
