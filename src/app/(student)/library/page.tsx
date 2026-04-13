@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,10 @@ import { LibraryRootCard } from "@/features/root-words/components/library-root-c
 import { LibrarySpotlightCard } from "@/features/root-words/components/library-spotlight-card";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
-import { getLibraryRootWords, type LibraryRootWord } from "@/server/repositories/root-words-repository";
+import {
+  getPaginatedLibraryRootWords,
+  type LibraryRootWord,
+} from "@/server/repositories/root-words-repository";
 
 const levelFilters = [
   { label: "Tất cả", value: "" },
@@ -17,52 +20,118 @@ const levelFilters = [
   { label: "Nâng cao", value: "advanced" },
 ] as const;
 
-function getFeaturedRootWord(rootWords: LibraryRootWord[]) {
-  return [...rootWords].sort((left, right) => {
-    const leftScore = left.wordCount * 4 + left.masteryProgress * 3 + left.previewWords.length * 5 + left.description.length;
-    const rightScore =
-      right.wordCount * 4 + right.masteryProgress * 3 + right.previewWords.length * 5 + right.description.length;
+const LIBRARY_PAGE_SIZE = 10;
 
-    return rightScore - leftScore;
-  })[0] ?? null;
+function getFeaturedRootWord(rootWords: LibraryRootWord[]) {
+  return (
+    [...rootWords].sort((left, right) => {
+      const leftScore =
+        left.wordCount * 4 +
+        left.masteryProgress * 3 +
+        left.previewWords.length * 5 +
+        left.description.length;
+      const rightScore =
+        right.wordCount * 4 +
+        right.masteryProgress * 3 +
+        right.previewWords.length * 5 +
+        right.description.length;
+
+      return rightScore - leftScore;
+    })[0] ?? null
+  );
+}
+
+function parsePageValue(rawPage?: string) {
+  const parsed = Number.parseInt(rawPage ?? "1", 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+
+  return parsed;
+}
+
+function buildLibraryHref({
+  query,
+  level,
+  page,
+}: {
+  query: string;
+  level: string;
+  page: number;
+}) {
+  const params = new URLSearchParams();
+
+  if (query) {
+    params.set("q", query);
+  }
+
+  if (level) {
+    params.set("level", level);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const nextQuery = params.toString();
+  return nextQuery ? `/library?${nextQuery}` : "/library";
 }
 
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; level?: string }>;
+  searchParams: Promise<{ q?: string; level?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const normalizedLevel = (params.level ?? "").toLowerCase();
-  const activeLevel = levelFilters.some((filter) => filter.value === normalizedLevel) ? normalizedLevel : "";
+  const activeLevel = levelFilters.some(
+    (filter) => filter.value === normalizedLevel,
+  )
+    ? normalizedLevel
+    : "";
+  const requestedPage = parsePageValue(params.page);
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const rootWords = await getLibraryRootWords({
+  const {
+    items: rootWords,
+    totalCount,
+    totalPages,
+    currentPage,
+    pageSize,
+  } = await getPaginatedLibraryRootWords({
     query: query || undefined,
     level: activeLevel || undefined,
     userId: user?.id ?? null,
+    page: requestedPage,
+    pageSize: LIBRARY_PAGE_SIZE,
   });
-  const buildFilterHref = (nextLevel: string) => {
-    const nextParams = new URLSearchParams();
 
-    if (query) {
-      nextParams.set("q", query);
-    }
-
-    if (nextLevel) {
-      nextParams.set("level", nextLevel);
-    }
-
-    const nextQuery = nextParams.toString();
-    return nextQuery ? `/library?${nextQuery}` : "/library";
-  };
+  const buildFilterHref = (nextLevel: string) =>
+    buildLibraryHref({
+      query,
+      level: nextLevel,
+      page: 1,
+    });
+  const buildPageHref = (nextPage: number) =>
+    buildLibraryHref({
+      query,
+      level: activeLevel,
+      page: nextPage,
+    });
   const featuredRootWord = getFeaturedRootWord(rootWords);
-  const rankedRootWords = featuredRootWord ? rootWords.filter((rootWord) => rootWord.id !== featuredRootWord.id) : rootWords;
+  const rankedRootWords = featuredRootWord
+    ? rootWords.filter((rootWord) => rootWord.id !== featuredRootWord.id)
+    : rootWords;
   const bentoRootWords = rankedRootWords.slice(0, 5);
   const remainingRootWords = rankedRootWords.slice(5);
+  const visibleRangeStart =
+    rootWords.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const visibleRangeEnd =
+    rootWords.length > 0 ? visibleRangeStart + rootWords.length - 1 : 0;
 
   return (
     <div className="space-y-6">
@@ -76,7 +145,8 @@ export default async function LibraryPage({
               Thư viện từ gốc
             </h1>
             <p className="max-w-[28rem] text-base leading-6 text-[#424754]">
-              Nắm vững các mảnh ghép nền tảng của tiếng Anh. Khám phá từ nguyên theo cách học có hệ thống và dễ ghi nhớ.
+              Nắm vững các mảnh ghép nền tảng của tiếng Anh. Khám phá từ nguyên
+              theo cách học có hệ thống và dễ ghi nhớ.
             </p>
           </div>
         </div>
@@ -109,9 +179,16 @@ export default async function LibraryPage({
       <form className="grid gap-3 rounded-[20px] border border-[color:var(--border)] bg-white p-4 md:grid-cols-[1fr_auto]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--muted-foreground)]" />
-          <Input name="q" defaultValue={query} placeholder="Tìm từ gốc hoặc nghĩa..." className="h-11 pl-10" />
+          <Input
+            name="q"
+            defaultValue={query}
+            placeholder="Tìm từ gốc hoặc nghĩa..."
+            className="h-11 pl-10"
+          />
         </div>
-        {activeLevel ? <input type="hidden" name="level" value={activeLevel} /> : null}
+        {activeLevel ? (
+          <input type="hidden" name="level" value={activeLevel} />
+        ) : null}
         <Button type="submit" className="h-11 rounded-[14px] px-5">
           Tìm kiếm
         </Button>
@@ -128,7 +205,9 @@ export default async function LibraryPage({
             {bentoRootWords.map((rootWord) => (
               <LibraryRootCard key={rootWord.id} rootWord={rootWord} />
             ))}
-            {featuredRootWord ? <LibrarySpotlightCard rootWord={featuredRootWord} /> : null}
+            {featuredRootWord ? (
+              <LibrarySpotlightCard rootWord={featuredRootWord} />
+            ) : null}
           </section>
 
           {remainingRootWords.length > 0 ? (
@@ -137,6 +216,68 @@ export default async function LibraryPage({
                 <LibraryRootCard key={rootWord.id} rootWord={rootWord} />
               ))}
             </section>
+          ) : null}
+
+          {totalPages > 1 ? (
+            <nav
+              aria-label="Phân trang thư viện"
+              className="flex flex-col gap-4 rounded-[20px] border border-[color:var(--border)] bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-sm leading-6 text-[#424754]">
+                Hiển thị {visibleRangeStart}-{visibleRangeEnd} trên {totalCount}{" "}
+                root word
+              </p>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                {currentPage > 1 ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 rounded-[12px] border-[#dbe5f0] px-4"
+                  >
+                    <Link href={buildPageHref(currentPage - 1)}>
+                      <ChevronLeft className="size-4" />
+                      Trước
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-[12px] border-[#dbe5f0] px-4"
+                    disabled
+                  >
+                    <ChevronLeft className="size-4" />
+                    Trước
+                  </Button>
+                )}
+
+                <div className="inline-flex h-10 min-w-[7rem] items-center justify-center rounded-[12px] bg-[#f2f4f6] px-4 text-sm font-semibold text-[#191c1e]">
+                  Trang {currentPage}/{totalPages}
+                </div>
+
+                {currentPage < totalPages ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 rounded-[12px] border-[#dbe5f0] px-4"
+                  >
+                    <Link href={buildPageHref(currentPage + 1)}>
+                      Sau
+                      <ChevronRight className="size-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="h-10 rounded-[12px] border-[#dbe5f0] px-4"
+                    disabled
+                  >
+                    Sau
+                    <ChevronRight className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </nav>
           ) : null}
         </div>
       )}

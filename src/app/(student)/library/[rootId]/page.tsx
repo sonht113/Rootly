@@ -1,4 +1,3 @@
-import { RefreshOnMount } from "@/components/shared/refresh-on-mount";
 import { PageHeader } from "@/components/shared/page-header";
 import { RootWordDetailSections } from "@/features/root-words/components/root-word-detail-sections";
 import { RootWordQuizActions } from "@/features/root-words/components/root-word-quiz-actions";
@@ -7,7 +6,7 @@ import { SchedulePlanDialog } from "@/features/study-plans/components/schedule-p
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getRootWordDetail } from "@/server/repositories/root-words-repository";
 import { getRootWordQuizSummary } from "@/server/repositories/root-word-quizzes-repository";
-import { getRootWordReviewContext, recordRootWordDetailView } from "@/server/repositories/study-repository";
+import { getRootWordReviewContext } from "@/server/repositories/study-repository";
 
 export default async function RootWordDetailPage({
   params,
@@ -27,15 +26,11 @@ export default async function RootWordDetailPage({
     getRootWordQuizSummary(rootId),
     reviewId ? getRootWordReviewContext(rootId, reviewId) : Promise.resolve(null),
   ]);
-  const detailViewResult =
-    profile?.role === "student" ? await recordRootWordDetailView(rootId) : { recorded: false, sessionId: null };
-
   const canManageQuiz = profile?.role === "admin" || profile?.role === "teacher";
   const hasSummaryAction = Boolean(reviewContext) || quizSummary.hasQuiz || canManageQuiz;
 
   return (
     <div className="space-y-6">
-      <RefreshOnMount enabled={detailViewResult.recorded} />
       <PageHeader
         eyebrow="Chi tiết từ gốc"
         title={rootWord.root}

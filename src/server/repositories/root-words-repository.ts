@@ -37,6 +37,37 @@ export interface LibraryRootWord extends RootWordRow {
   originLabel: string;
   masteryProgress: number;
   learningStatus: RootLearningStatus;
+  ctaLabel: string;
+  ctaHref: string;
+}
+
+export interface PaginatedLibraryRootWords {
+  items: LibraryRootWord[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+interface LibraryRootWordFilters {
+  query?: string;
+  level?: string;
+  userId?: string | null;
+}
+
+interface PaginatedLibraryRootWordFilters extends LibraryRootWordFilters {
+  page?: number;
+  pageSize?: number;
+}
+
+interface LibraryReviewRow {
+  id: string;
+  root_word_id: string;
+  status: string;
+  review_date: string;
+  review_step: number;
+  completed_at: string | null;
+  updated_at: string;
 }
 
 function formatOriginLabel(rootWord: Pick<RootWordRow, "meaning" | "description">) {
@@ -76,8 +107,18 @@ function calculateMasteryProgress(
   return Math.max(0, Math.min(100, planScore + reviewScore));
 }
 
-export async function getLibraryRootWords(filters?: { query?: string; level?: string; userId?: string | null }) {
-  const supabase = await createServerSupabaseClient();
+function getNormalizedPositiveInteger(value: number | undefined, fallback: number) {
+  if (!value || !Number.isFinite(value) || value < 1) {
+    return fallback;
+  }
+
+  return Math.floor(value);
+}
+
+function buildLibraryRootWordsDataQuery(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  filters?: Pick<LibraryRootWordFilters, "query" | "level">,
+) {
   let query = supabase.from("root_words").select("*").eq("is_published", true).order("root");
 
   if (filters?.query) {
@@ -88,12 +129,126 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
     query = query.eq("level", filters.level);
   }
 
-  const { data: rootWords, error } = await query;
-  if (error) {
-    unwrapSupabaseError(error, "Không thể tải thư viện từ gốc");
+  return query;
+}
+
+function buildLibraryRootWordsCountQuery(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  filters?: Pick<LibraryRootWordFilters, "query" | "level">,
+) {
+  let query = supabase.from("root_words").select("*", { count: "exact", head: true }).eq("is_published", true);
+
+  if (filters?.query) {
+    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%,description.ilike.%${filters.query}%`);
   }
 
-  const baseRootWords = (rootWords ?? []) as RootWordRow[];
+  if (filters?.level) {
+    query = query.eq("level", filters.level);
+  }
+
+  return query;
+}
+
+function compareNullableDatesDescending(left: string | null, right: string | null) {
+  if (left === right) {
+    return 0;
+  }
+
+  if (!left) {
+    return 1;
+  }
+
+  if (!right) {
+    return -1;
+  }
+
+  return right.localeCompare(left);
+}
+
+function getActiveReviewIdByRootId(reviews: LibraryReviewRow[]) {
+  const activeReviews = reviews
+    .filter((review) => review.status === "pending" || review.status === "rescheduled")
+    .sort((left, right) => {
+      if (left.review_date !== right.review_date) {
+        return left.review_date.localeCompare(right.review_date);
+      }
+
+      if (left.review_step !== right.review_step) {
+        return left.review_step - right.review_step;
+      }
+
+      return right.updated_at.localeCompare(left.updated_at);
+    });
+
+  const activeReviewIdByRootId = new Map<string, string>();
+
+  for (const review of activeReviews) {
+    if (!activeReviewIdByRootId.has(review.root_word_id)) {
+      activeReviewIdByRootId.set(review.root_word_id, review.id);
+    }
+  }
+
+  return activeReviewIdByRootId;
+}
+
+function getLatestCompletedReviewIdByRootId(reviews: LibraryReviewRow[]) {
+  const completedReviews = reviews
+    .filter((review) => review.status === "done")
+    .sort((left, right) => {
+      const completedAtDelta = compareNullableDatesDescending(left.completed_at, right.completed_at);
+      if (completedAtDelta !== 0) {
+        return completedAtDelta;
+      }
+
+      if (left.review_step !== right.review_step) {
+        return right.review_step - left.review_step;
+      }
+
+      return right.updated_at.localeCompare(left.updated_at);
+    });
+
+  const completedReviewIdByRootId = new Map<string, string>();
+
+  for (const review of completedReviews) {
+    if (!completedReviewIdByRootId.has(review.root_word_id)) {
+      completedReviewIdByRootId.set(review.root_word_id, review.id);
+    }
+  }
+
+  return completedReviewIdByRootId;
+}
+
+function getLibraryRootWordCta(
+  rootWordId: string,
+  learningStatus: RootLearningStatus,
+  activeReviewId: string | null,
+  latestCompletedReviewId: string | null,
+) {
+  if (learningStatus === "reviewing" && activeReviewId) {
+    return {
+      ctaLabel: "Ôn tập",
+      ctaHref: `/library/${rootWordId}?reviewId=${activeReviewId}`,
+    };
+  }
+
+  if (learningStatus === "remembered" && latestCompletedReviewId) {
+    return {
+      ctaLabel: "Ôn tập lại",
+      ctaHref: `/library/${rootWordId}?reviewId=${latestCompletedReviewId}`,
+    };
+  }
+
+  return {
+    ctaLabel: "Học ngay",
+    ctaHref: `/library/${rootWordId}`,
+  };
+}
+
+async function hydrateLibraryRootWords(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  baseRootWords: RootWordRow[],
+  userId?: string | null,
+) {
   if (baseRootWords.length === 0) {
     return [] as LibraryRootWord[];
   }
@@ -103,19 +258,23 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
     data: [] as Array<{ root_word_id: string; status: string }>,
     error: null,
   });
+  const emptyReviewResult = Promise.resolve({
+    data: [] as LibraryReviewRow[],
+    error: null,
+  });
   const [{ data: words, error: wordsError }, { data: plans, error: plansError }, { data: reviews, error: reviewsError }] =
     await Promise.all([
       supabase.from("words").select("root_word_id, word").in("root_word_id", rootWordIds).order("word"),
-      filters?.userId
-        ? supabase.from("user_root_plans").select("root_word_id, status").eq("user_id", filters.userId).in("root_word_id", rootWordIds)
+      userId
+        ? supabase.from("user_root_plans").select("root_word_id, status").eq("user_id", userId).in("root_word_id", rootWordIds)
         : emptyPlanResult,
-      filters?.userId
+      userId
         ? supabase
             .from("user_root_reviews")
-            .select("root_word_id, status")
-            .eq("user_id", filters.userId)
+            .select("id, root_word_id, status, review_date, review_step, completed_at, updated_at")
+            .eq("user_id", userId)
             .in("root_word_id", rootWordIds)
-        : emptyPlanResult,
+        : emptyReviewResult,
     ]);
 
   const nestedError = wordsError ?? plansError ?? reviewsError;
@@ -144,14 +303,21 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
     reviewsByRootId.set(review.root_word_id, groupedReviews);
   }
 
+  const activeReviewIdByRootId = getActiveReviewIdByRootId((reviews ?? []) as LibraryReviewRow[]);
+  const latestCompletedReviewIdByRootId = getLatestCompletedReviewIdByRootId((reviews ?? []) as LibraryReviewRow[]);
+
   return baseRootWords.map((rootWord) => {
     const relatedWords = wordsByRootId.get(rootWord.id) ?? [];
     const previewWords = relatedWords.slice(0, 3);
     const plansForRoot = plansByRootId.get(rootWord.id) ?? [];
     const reviewsForRoot = reviewsByRootId.get(rootWord.id) ?? [];
-    const masteryProgress = calculateMasteryProgress(
-      plansForRoot,
-      reviewsForRoot,
+    const masteryProgress = calculateMasteryProgress(plansForRoot, reviewsForRoot);
+    const learningStatus = deriveRootLearningStatus(plansForRoot, reviewsForRoot);
+    const { ctaLabel, ctaHref } = getLibraryRootWordCta(
+      rootWord.id,
+      learningStatus,
+      activeReviewIdByRootId.get(rootWord.id) ?? null,
+      latestCompletedReviewIdByRootId.get(rootWord.id) ?? null,
     );
 
     return {
@@ -161,9 +327,65 @@ export async function getLibraryRootWords(filters?: { query?: string; level?: st
       moreWordsCount: Math.max(0, relatedWords.length - previewWords.length),
       originLabel: formatOriginLabel(rootWord),
       masteryProgress,
-      learningStatus: deriveRootLearningStatus(plansForRoot, reviewsForRoot),
+      learningStatus,
+      ctaLabel,
+      ctaHref,
     };
   });
+}
+
+export async function getLibraryRootWords(filters?: LibraryRootWordFilters) {
+  const supabase = await createServerSupabaseClient();
+  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters);
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tải thư viện từ gốc");
+  }
+
+  return hydrateLibraryRootWords(supabase, (rootWords ?? []) as RootWordRow[], filters?.userId ?? null);
+}
+
+export async function getPaginatedLibraryRootWords(filters?: PaginatedLibraryRootWordFilters): Promise<PaginatedLibraryRootWords> {
+  const supabase = await createServerSupabaseClient();
+  const requestedPage = getNormalizedPositiveInteger(filters?.page, 1);
+  const pageSize = getNormalizedPositiveInteger(filters?.pageSize, 10);
+  const { count, error: countError } = await buildLibraryRootWordsCountQuery(supabase, filters);
+
+  if (countError) {
+    unwrapSupabaseError(countError, "Không thể đếm số lượng root word trong thư viện");
+  }
+
+  const totalCount = Number(count ?? 0);
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 1;
+  const currentPage = totalCount > 0 ? Math.min(requestedPage, totalPages) : 1;
+
+  if (totalCount === 0) {
+    return {
+      items: [],
+      totalCount,
+      totalPages,
+      currentPage,
+      pageSize,
+    };
+  }
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters).range(from, to);
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tải danh sách root word theo trang");
+  }
+
+  const items = await hydrateLibraryRootWords(supabase, (rootWords ?? []) as RootWordRow[], filters?.userId ?? null);
+
+  return {
+    items,
+    totalCount,
+    totalPages,
+    currentPage,
+    pageSize,
+  };
 }
 
 export async function getRootWordDetail(rootId: string) {

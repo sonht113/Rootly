@@ -63,7 +63,7 @@ describe("CalendarPlanner", () => {
     mockedToastError.mockReset();
   });
 
-  it("renders plan cards with detail and delete actions without manual meta or edit action", () => {
+  it("renders plan and review cards with their respective calendar actions", () => {
     render(
       <CalendarPlanner
         rootWords={[
@@ -105,9 +105,10 @@ describe("CalendarPlanner", () => {
       .map((link) => link.getAttribute("href"))
       .filter((href): href is string => Boolean(href));
 
-    expect(screen.getAllByRole("link", { name: "Xem chi tiết" })).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Xem chi tiết" })).toHaveAttribute("href", "/library/root-1");
+    expect(screen.getByRole("link", { name: "Ôn tập" })).toHaveAttribute("href", "/library/root-2?reviewId=review-1");
     expect(hrefs).toContain("/library/root-1");
-    expect(hrefs).toContain("/library/root-2");
+    expect(hrefs).toContain("/library/root-2?reviewId=review-1");
     expect(screen.getByRole("button", { name: "Xóa lịch học cho spect" })).toBeInTheDocument();
     expect(screen.queryByText("Thủ công")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Chỉnh sửa lịch học cho spect" })).not.toBeInTheDocument();
