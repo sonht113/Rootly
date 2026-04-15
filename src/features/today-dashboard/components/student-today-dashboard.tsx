@@ -7,6 +7,7 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -104,8 +105,10 @@ function ReviewToneBadge({ item }: { item: ReviewHighlightItem }) {
 
 export function StudentTodayDashboard({
   viewModel,
+  classSuggestions,
 }: {
   viewModel: TodayDashboardViewModel;
+  classSuggestions?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -272,6 +275,8 @@ export function StudentTodayDashboard({
               </div>
             ))}
           </div>
+
+          {classSuggestions}
         </div>
 
         <div className="space-y-6">

@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockedGetCurrentProfile,
+  mockedGetRootLearningSnapshot,
   mockedGetRootWordDetail,
   mockedGetRootWordQuizSummary,
   mockedGetRootWordReviewContext,
 } = vi.hoisted(() => ({
   mockedGetCurrentProfile: vi.fn(),
+  mockedGetRootLearningSnapshot: vi.fn(),
   mockedGetRootWordDetail: vi.fn(),
   mockedGetRootWordQuizSummary: vi.fn(),
   mockedGetRootWordReviewContext: vi.fn(),
@@ -46,6 +48,7 @@ vi.mock("@/server/repositories/root-word-quizzes-repository", () => ({
 }));
 
 vi.mock("@/server/repositories/study-repository", () => ({
+  getRootLearningSnapshot: mockedGetRootLearningSnapshot,
   getRootWordReviewContext: mockedGetRootWordReviewContext,
 }));
 
@@ -55,6 +58,7 @@ describe("student library root detail page", () => {
   beforeEach(() => {
     mockedGetRootWordDetail.mockReset();
     mockedGetCurrentProfile.mockReset();
+    mockedGetRootLearningSnapshot.mockReset();
     mockedGetRootWordQuizSummary.mockReset();
     mockedGetRootWordReviewContext.mockReset();
 
@@ -68,6 +72,11 @@ describe("student library root detail page", () => {
     mockedGetRootWordQuizSummary.mockResolvedValue({
       hasQuiz: true,
       questionCount: 10,
+    });
+    mockedGetRootLearningSnapshot.mockResolvedValue({
+      hasPlan: false,
+      nextReviewText: "Chưa có lịch học cho root này.",
+      nextReviewDate: null,
     });
     mockedGetRootWordReviewContext.mockResolvedValue(null);
   });

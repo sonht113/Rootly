@@ -9,6 +9,14 @@ import { unwrapSupabaseError } from "@/server/repositories/shared";
 const ACTIVE_PLAN_STATUSES = ["planned", "overdue", "in_progress"] as const;
 const ACTIVE_REVIEW_STATUSES = ["pending", "rescheduled"] as const;
 const DETAIL_REVIEW_STATUSES = ["pending", "rescheduled", "done"] as const;
+const USER_ROOT_PLAN_UNIQUE_CONSTRAINTS = [
+  "user_root_plans_user_id_root_word_id_key",
+  "user_root_plans_user_id_root_word_id_scheduled_date_key",
+] as const;
+const PLAN_ALREADY_EXISTS_MESSAGE =
+  "Tu goc nay da co trong lich hoc cua ban. Hay hoan thanh hoac xoa lich cu truoc khi them lai.";
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
 interface ActivePlanCandidate {
   id: string;
@@ -79,6 +87,60 @@ function formatReviewDueLabel(reviewDateString: string) {
     addSuffix: true,
     locale: vi,
   })}`;
+}
+
+function isUserRootPlanUniqueViolation(error: { message?: string } | null) {
+  if (!error?.message) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    normalizedMessage.includes("duplicate key value violates unique constraint") &&
+    USER_ROOT_PLAN_UNIQUE_CONSTRAINTS.some((constraint) => normalizedMessage.includes(constraint))
+  );
+}
+
+async function requireCurrentUser(supabase: ServerSupabaseClient) {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    unwrapSupabaseError(error, "Khong the xac thuc nguoi dung hien tai");
+  }
+
+  if (!user) {
+    throw new Error("Ban can dang nhap de quan ly lich hoc.");
+  }
+
+  return user;
+}
+
+async function getExistingPlanForRootWord(
+  supabase: ServerSupabaseClient,
+  userId: string,
+  rootWordId: string,
+  options?: { excludePlanId?: string },
+) {
+  let query = supabase
+    .from("user_root_plans")
+    .select("id, root_word_id, source")
+    .eq("user_id", userId)
+    .eq("root_word_id", rootWordId);
+
+  if (options?.excludePlanId) {
+    query = query.neq("id", options.excludePlanId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: true }).limit(1);
+
+  if (error) {
+    unwrapSupabaseError(error, "Khong the kiem tra lich hoc hien tai");
+  }
+
+  return (data ?? [])[0] ?? null;
 }
 
 export async function syncDueStatuses() {
@@ -280,22 +342,40 @@ export async function getWeeklyCalendar() {
 
 export async function createStudyPlan(input: SchedulePlanInput) {
   const supabase = await createServerSupabaseClient();
-  const { data: session } = await supabase.auth.getUser();
+  const user = await requireCurrentUser(supabase);
+  const existingPlan = await getExistingPlanForRootWord(supabase, user.id, input.rootWordId);
+
+  if (existingPlan) {
+    throw new Error(PLAN_ALREADY_EXISTS_MESSAGE);
+  }
 
   const { error } = await supabase.from("user_root_plans").insert({
-    user_id: session.user?.id,
+    user_id: user.id,
     root_word_id: input.rootWordId,
     scheduled_date: input.scheduledDate,
     source: input.source,
   });
 
   if (error) {
+    if (isUserRootPlanUniqueViolation(error)) {
+      throw new Error(PLAN_ALREADY_EXISTS_MESSAGE);
+    }
+
     unwrapSupabaseError(error, "Không thể tạo lịch học");
   }
 }
 
 export async function updateStudyPlan(input: UpdatePlanInput) {
   const supabase = await createServerSupabaseClient();
+  const user = await requireCurrentUser(supabase);
+  const existingPlan = await getExistingPlanForRootWord(supabase, user.id, input.rootWordId, {
+    excludePlanId: input.id,
+  });
+
+  if (existingPlan) {
+    throw new Error(PLAN_ALREADY_EXISTS_MESSAGE);
+  }
+
   const { error } = await supabase
     .from("user_root_plans")
     .update({
@@ -303,9 +383,14 @@ export async function updateStudyPlan(input: UpdatePlanInput) {
       scheduled_date: input.scheduledDate,
       source: input.source,
     })
-    .eq("id", input.id);
+    .eq("id", input.id)
+    .eq("user_id", user.id);
 
   if (error) {
+    if (isUserRootPlanUniqueViolation(error)) {
+      throw new Error(PLAN_ALREADY_EXISTS_MESSAGE);
+    }
+
     unwrapSupabaseError(error, "Không thể cập nhật lịch học");
   }
 }

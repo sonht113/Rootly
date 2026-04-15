@@ -58,6 +58,7 @@ const COPY = {
 interface SchedulePlanDialogProps {
   rootWords: RootWordOption[];
   dateOptions?: ScheduleDateOption[];
+  emptyStateMessage?: string;
   defaultValues?: {
     id?: string;
     rootWordId: string;
@@ -70,11 +71,13 @@ interface SchedulePlanDialogProps {
   triggerClassName?: string;
   triggerIcon?: ReactNode;
   triggerAriaLabel?: string;
+  disabled?: boolean;
 }
 
 export function SchedulePlanDialog({
   rootWords,
   dateOptions,
+  emptyStateMessage = COPY.noRoots,
   defaultValues,
   triggerLabel = COPY.defaultTrigger,
   triggerVariant = "accent",
@@ -82,6 +85,7 @@ export function SchedulePlanDialog({
   triggerClassName,
   triggerIcon,
   triggerAriaLabel,
+  disabled = false,
 }: SchedulePlanDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -208,13 +212,19 @@ export function SchedulePlanDialog({
         toast.success(isEditing ? COPY.updateSuccess : COPY.createSuccess);
         setOpen(false);
         router.refresh();
-      } catch {
-        toast.error(isEditing ? COPY.updateFailure : COPY.createFailure);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : isEditing
+              ? COPY.updateFailure
+              : COPY.createFailure,
+        );
       }
     });
   });
 
-  const isSubmitDisabled = isPending || rootWords.length === 0 || sessionMode === "review";
+  const isSubmitDisabled = disabled || isPending || rootWords.length === 0 || sessionMode === "review";
   const rootWordError = form.formState.errors.rootWordId ? COPY.rootValidation : null;
   const dateError = form.formState.errors.scheduledDate?.message ? COPY.dateValidation : null;
 
@@ -226,6 +236,7 @@ export function SchedulePlanDialog({
           size={triggerSize}
           className={triggerClassName}
           aria-label={triggerAriaLabel}
+          disabled={disabled}
         >
           {triggerIcon ?? <PlusCircle className="size-4" />}
           {triggerLabel}
@@ -284,7 +295,7 @@ export function SchedulePlanDialog({
                 <div className="rounded-[8px] bg-[#f2f4f6] p-2">
                   {rootWords.length === 0 ? (
                     <div className="rounded-[6px] bg-white px-4 py-4 text-sm leading-6 text-[#5b6472]">
-                      {COPY.noRoots}
+                      {emptyStateMessage}
                     </div>
                   ) : filteredRootWords.length > 0 ? (
                     <div className="space-y-2">

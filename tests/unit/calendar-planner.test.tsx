@@ -3,11 +3,12 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockedRefresh, mockedDeleteStudyPlanAction, mockedToastSuccess, mockedToastError } = vi.hoisted(() => ({
+const { mockedRefresh, mockedDeleteStudyPlanAction, mockedToastSuccess, mockedToastError, mockedScheduleDialogProps } = vi.hoisted(() => ({
   mockedRefresh: vi.fn(),
   mockedDeleteStudyPlanAction: vi.fn(),
   mockedToastSuccess: vi.fn(),
   mockedToastError: vi.fn(),
+  mockedScheduleDialogProps: [] as Array<{ rootWords: Array<{ id: string; root: string; meaning: string }> }>,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -25,9 +26,16 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/features/study-plans/components/schedule-plan-dialog", () => ({
-  SchedulePlanDialog: ({ triggerAriaLabel }: { triggerAriaLabel?: string }) => (
-    <button type="button">{triggerAriaLabel ?? "schedule-dialog"}</button>
-  ),
+  SchedulePlanDialog: ({
+    rootWords,
+    triggerAriaLabel,
+  }: {
+    rootWords: Array<{ id: string; root: string; meaning: string }>;
+    triggerAriaLabel?: string;
+  }) => {
+    mockedScheduleDialogProps.push({ rootWords });
+    return <button type="button">{triggerAriaLabel ?? "schedule-dialog"}</button>;
+  },
 }));
 
 vi.mock("@/features/study-plans/actions/plans", () => ({
@@ -61,10 +69,11 @@ describe("CalendarPlanner", () => {
     mockedDeleteStudyPlanAction.mockResolvedValue(undefined);
     mockedToastSuccess.mockReset();
     mockedToastError.mockReset();
+    mockedScheduleDialogProps.length = 0;
   });
 
   it("renders plan and review cards with their respective calendar actions", () => {
-    render(
+    const { container } = render(
       <CalendarPlanner
         rootWords={[
           { id: "root-1", root: "spect", meaning: "look" },
@@ -104,9 +113,16 @@ describe("CalendarPlanner", () => {
       .getAllByRole("link")
       .map((link) => link.getAttribute("href"))
       .filter((href): href is string => Boolean(href));
+    const calendarScrollViewport = container.querySelector(".overflow-x-auto");
+    const calendarGrid = calendarScrollViewport?.firstElementChild;
 
-    expect(screen.getByRole("link", { name: "Xem chi tiết" })).toHaveAttribute("href", "/library/root-1");
+    expect(screen.getByRole("link", { name: "học ngay" })).toHaveAttribute("href", "/library/root-1");
     expect(screen.getByRole("link", { name: "Ôn tập" })).toHaveAttribute("href", "/library/root-2?reviewId=review-1");
+    expect(calendarScrollViewport?.className).toContain("xl:max-w-[68rem]");
+    expect(calendarGrid?.className).toContain("min-w-[1168px]");
+    expect(calendarGrid?.className).toContain("lg:min-w-[1264px]");
+    expect(calendarGrid?.className).toContain("xl:min-w-[1312px]");
+    expect(calendarGrid?.className).not.toContain("xl:min-w-0");
     expect(hrefs).toContain("/library/root-1");
     expect(hrefs).toContain("/library/root-2?reviewId=review-1");
     expect(screen.getByRole("button", { name: "Xóa lịch học cho spect" })).toBeInTheDocument();
@@ -216,5 +232,42 @@ describe("CalendarPlanner", () => {
 
     expect(screen.getByText("Đã hoàn thành")).toBeInTheDocument();
     expect(card?.className).toContain("bg-[#dff7e5]");
+  });
+  it("excludes root words that are already planned outside the current week from add dialogs", () => {
+    render(
+      <CalendarPlanner
+        rootWords={[
+          { id: "root-1", root: "spect", meaning: "look" },
+          { id: "root-2", root: "bio", meaning: "life" },
+        ]}
+        plans={[
+          {
+            id: "plan-1",
+            scheduled_date: getDateKeyFromOffset(10),
+            status: "planned",
+            source: "manual",
+            root_word: {
+              id: "root-1",
+              root: "spect",
+              meaning: "look",
+              level: "basic",
+            },
+          },
+        ]}
+        reviews={[]}
+      />,
+    );
+
+    expect(mockedScheduleDialogProps.length).toBeGreaterThan(0);
+    expect(
+      mockedScheduleDialogProps.every((props) =>
+        props.rootWords.every((rootWord) => rootWord.id !== "root-1"),
+      ),
+    ).toBe(true);
+    expect(
+      mockedScheduleDialogProps.some((props) =>
+        props.rootWords.some((rootWord) => rootWord.id === "root-2"),
+      ),
+    ).toBe(true);
   });
 });

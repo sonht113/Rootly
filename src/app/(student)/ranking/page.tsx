@@ -1,16 +1,26 @@
 import { BarChart3 } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { ExamRankingFilters } from "@/features/ranking/components/exam-ranking-filters";
+import { ExamRankingInsightCard } from "@/features/ranking/components/exam-ranking-insight-card";
+import { ExamRankingSummaryCard } from "@/features/ranking/components/exam-ranking-summary-card";
 import { RankingActivityComparisonChart } from "@/features/ranking/components/ranking-activity-comparison-chart";
 import { RankingFilters } from "@/features/ranking/components/ranking-filters";
 import { RankingInsightCard } from "@/features/ranking/components/ranking-insight-card";
 import { RankingList } from "@/features/ranking/components/ranking-list";
 import { RankingPodium } from "@/features/ranking/components/ranking-podium";
+import { RankingSourceTabs } from "@/features/ranking/components/ranking-source-tabs";
 import { RankingTipCard } from "@/features/ranking/components/ranking-tip-card";
+import { buildExamRankingViewModel } from "@/features/ranking/lib/build-exam-ranking-view-model";
 import { buildRankingPageViewModel } from "@/features/ranking/lib/build-ranking-page-view-model";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  getExamLeaderboard,
+  getExamRankingDetail,
+  getExamRankingOptions,
+} from "@/server/repositories/exams-repository";
 import { getLeaderboard, getRankingInsights } from "@/server/repositories/ranking-repository";
-import type { RankingMetric, RankingPeriod, RankingScope } from "@/types/domain";
+import type { RankingMetric, RankingPeriod, RankingScope, RankingSource } from "@/types/domain";
 
 const metricOptions: RankingMetric[] = ["root_words_learned", "words_learned", "reviews_completed", "streak"];
 const periodOptions: RankingPeriod[] = ["today", "week", "month", "all"];
@@ -18,9 +28,40 @@ const periodOptions: RankingPeriod[] = ["today", "week", "month", "all"];
 export default async function RankingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ metric?: RankingMetric; period?: RankingPeriod; scope?: RankingScope; classId?: string }>;
+  searchParams: Promise<{
+    source?: RankingSource;
+    metric?: RankingMetric;
+    period?: RankingPeriod;
+    scope?: RankingScope;
+    classId?: string;
+    examId?: string;
+  }>;
 }) {
   const params = await searchParams;
+  const source: RankingSource = params.source === "exam" ? "exam" : "activity";
+
+  if (source === "exam") {
+    const examOptions = await getExamRankingOptions();
+
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Xếp hạng"
+          title="Bảng xếp hạng học tập"
+          description="Chuyển giữa xếp hạng theo hoạt động và xếp hạng theo kỳ thi để xem đúng nguồn dữ liệu mà hệ thống đang đo lường."
+        />
+
+        <RankingSourceTabs source={source} />
+
+        {examOptions.length === 0 ? (
+          <RankingEmptyExamState />
+        ) : (
+          <ExamRankingSection examId={resolveExamId(params.examId, examOptions)} examOptions={examOptions} />
+        )}
+      </div>
+    );
+  }
+
   const metric = metricOptions.includes(params.metric ?? "reviews_completed") ? (params.metric as RankingMetric) : "reviews_completed";
   const period = periodOptions.includes(params.period ?? "week") ? (params.period as RankingPeriod) : "week";
   const requestedScope = params.scope === "class" ? "class" : "all";
@@ -59,8 +100,10 @@ export default async function RankingPage({
       <PageHeader
         eyebrow="Xếp hạng"
         title="Bảng xếp hạng học tập"
-        description="Theo dõi vị trí của bạn, so sánh nhịp học với nhóm dẫn đầu và giữ đà bứt lên qua từng giai đoạn."
+        description="Chuyển giữa xếp hạng theo hoạt động và xếp hạng theo kỳ thi để xem đúng nguồn dữ liệu mà hệ thống đang đo lường."
       />
+
+      <RankingSourceTabs source={source} />
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-8">
@@ -109,10 +152,68 @@ export default async function RankingPage({
   );
 }
 
+async function ExamRankingSection({
+  examId,
+  examOptions,
+}: {
+  examId: string;
+  examOptions: Awaited<ReturnType<typeof getExamRankingOptions>>;
+}) {
+  const [exam, leaderboard] = await Promise.all([getExamRankingDetail(examId), getExamLeaderboard(examId)]);
+  const viewModel = buildExamRankingViewModel(leaderboard);
+
+  return (
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="space-y-8">
+        <ExamRankingFilters examId={examId} exams={examOptions} />
+        <RankingPodium entries={viewModel.podium} />
+        <RankingList
+          previewEntries={viewModel.previewEntries}
+          allEntries={viewModel.allEntries}
+          listHasOverflow={viewModel.listHasOverflow}
+          valueHeader="ĐIỂM THI"
+          emptyMessage="Bảng xếp hạng kỳ thi sẽ xuất hiện khi có lượt nộp đầu tiên."
+        />
+      </div>
+
+      <div className="space-y-8">
+        <ExamRankingInsightCard insights={viewModel.insights} />
+        <ExamRankingSummaryCard
+          exam={exam}
+          participantCount={viewModel.insights.participantCount}
+          topScore={viewModel.insights.topScore}
+          averageScore={viewModel.insights.averageScore}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RankingEmptyExamState() {
+  return (
+    <div className="rounded-[24px] bg-white px-6 py-8 text-sm leading-6 text-[color:var(--muted-foreground)] shadow-[var(--shadow-soft)]">
+      Chưa có kỳ thi nào đủ điều kiện để hiển thị trên bảng xếp hạng. Hãy chờ một kỳ thi được phát hành hoặc hoàn thành ít nhất một lượt nộp.
+    </div>
+  );
+}
+
 function resolveClassId(classId: string | undefined, classes: Array<{ id: string; name: string }>) {
   if (classId && classes.some((classItem) => classItem.id === classId)) {
     return classId;
   }
 
   return classes[0]?.id;
+}
+
+function resolveExamId(
+  examId: string | undefined,
+  exams: Array<{
+    id: string;
+  }>,
+) {
+  if (examId && exams.some((exam) => exam.id === examId)) {
+    return examId;
+  }
+
+  return exams[0]!.id;
 }

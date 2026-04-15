@@ -1,10 +1,14 @@
+import Link from "next/link";
+
 import { PageHeader } from "@/components/shared/page-header";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ClassExamsPanel } from "@/features/classes/components/class-exams-panel";
+import { ClassMembersPanel, ClassSuggestionsPanel } from "@/features/classes/components/class-detail-panels";
 import { RankingRow } from "@/features/ranking/components/ranking-row";
-import { AddMemberForm, SuggestRootForm } from "@/features/classes/components/class-manager";
 import { getClassDetail } from "@/server/repositories/classes-repository";
+import { getManageableExams } from "@/server/repositories/exams-repository";
 import { getLeaderboard } from "@/server/repositories/ranking-repository";
 import { getPublishedRootWords } from "@/server/repositories/root-words-repository";
 
@@ -14,7 +18,7 @@ export default async function TeacherClassDetailPage({
   params: Promise<{ classId: string }>;
 }) {
   const { classId } = await params;
-  const [{ classData, summary }, rootWords, leaderboard] = await Promise.all([
+  const [{ classData, summary }, rootWords, leaderboard, exams] = await Promise.all([
     getClassDetail(classId),
     getPublishedRootWords(),
     getLeaderboard({
@@ -23,7 +27,9 @@ export default async function TeacherClassDetailPage({
       scope: "class",
       classId,
     }),
+    getManageableExams(),
   ]);
+  const classExams = exams.filter((exam) => exam.class_id === classId);
 
   return (
     <div className="space-y-6">
@@ -32,6 +38,11 @@ export default async function TeacherClassDetailPage({
         title={classData.name}
         description={classData.description ?? "Lớp học chưa có mô tả chi tiết."}
         badgeText={`${summary.memberCount} thành viên`}
+        action={
+          <Button asChild variant="outline">
+            <Link href={`/teacher/exams?classId=${classId}`}>Tạo kỳ thi cho lớp</Link>
+          </Button>
+        }
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -65,54 +76,26 @@ export default async function TeacherClassDetailPage({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Thêm học viên</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <AddMemberForm classId={classId} />
-            <div className="space-y-3">
-              {classData.class_members?.map((member: { id: string; profile: { username: string; role: string } }) => (
-                <div key={member.id} className="flex items-center justify-between rounded-[14px] bg-[color:var(--muted)] p-3">
-                  <span className="font-medium">{member.profile.username}</span>
-                  <Badge variant="outline">{member.profile.role === "teacher" ? "Giáo viên" : "Học viên"}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Gợi ý từ gốc</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <SuggestRootForm
-              classId={classId}
-              rootWords={rootWords.map((rootWord) => ({
-                id: rootWord.id,
-                root: rootWord.root,
-                meaning: rootWord.meaning,
-              }))}
-            />
-            <div className="space-y-3">
-              {classData.class_root_suggestions?.map(
-                (suggestion: { id: string; suggested_date: string; root_word: { root: string; meaning: string } }) => (
-                  <div key={suggestion.id} className="rounded-[14px] border border-[color:var(--border)] p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold lowercase">{suggestion.root_word.root}</p>
-                        <p className="text-sm text-[color:var(--muted-foreground)]">{suggestion.root_word.meaning}</p>
-                      </div>
-                      <Badge>{suggestion.suggested_date}</Badge>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ClassMembersPanel classId={classId} members={classData.class_members ?? []} />
+        <ClassSuggestionsPanel
+          classId={classId}
+          rootWords={rootWords.map((rootWord) => ({
+            id: rootWord.id,
+            root: rootWord.root,
+            meaning: rootWord.meaning,
+          }))}
+          suggestions={classData.class_root_suggestions ?? []}
+        />
       </div>
+
+      <ClassExamsPanel
+        title="Kỳ thi của lớp"
+        description="Theo dõi các đề thi đã gắn với lớp này và mở nhanh vào màn hình cấu hình hoặc kết quả."
+        emptyMessage="Chưa có kỳ thi nào được gắn với lớp này."
+        audience="teacher"
+        exams={classExams}
+        hrefBuilder={(examId) => `/teacher/exams/${examId}`}
+      />
 
       <Card>
         <CardHeader>
