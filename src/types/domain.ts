@@ -12,8 +12,14 @@ export type StudySessionType = "learn" | "review" | "quiz" | "detail_view";
 export type RankingMetric = "root_words_learned" | "words_learned" | "reviews_completed" | "streak";
 export type RankingPeriod = "today" | "week" | "month" | "all";
 export type RankingScope = "all" | "class";
+export type RankingSource = "activity" | "exam";
 export type RankingStatusTier = "novice" | "curator" | "polyglot";
 export type QuizQuestionType = "multiple_choice" | "text";
+export type ExamScope = "class" | "global";
+export type ExamStatus = "draft" | "published" | "closed";
+export type ExamAttemptStatus = "started" | "submitted" | "expired";
+export type NotificationType = "class_suggestion" | "class_member_added";
+export type NotificationMetadata = Record<string, string | number | boolean | null>;
 
 export interface RankingActivityPoint {
   date: string;
@@ -164,6 +170,21 @@ export interface StudySessionRow {
   created_at: string;
 }
 
+export interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link_href: string | null;
+  metadata: NotificationMetadata;
+  is_read: boolean;
+  read_at: string | null;
+  source_key: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ClassRow {
   id: string;
   name: string;
@@ -171,6 +192,174 @@ export interface ClassRow {
   teacher_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface ExamQuestionBankItemRow {
+  id: string;
+  created_by: string;
+  prompt: string;
+  question_type: QuizQuestionType;
+  correct_answer: string;
+  explanation: string | null;
+  option_a: string | null;
+  option_b: string | null;
+  option_c: string | null;
+  option_d: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamRow {
+  id: string;
+  title: string;
+  description: string | null;
+  scope: ExamScope;
+  class_id: string | null;
+  status: ExamStatus;
+  starts_at: string | null;
+  ends_at: string | null;
+  published_at: string | null;
+  duration_minutes: number | null;
+  question_count: number;
+  total_points: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamQuestionRow {
+  id: string;
+  exam_id: string;
+  question_bank_item_id: string | null;
+  position: number;
+  question_type: QuizQuestionType;
+  prompt: string;
+  correct_answer: string;
+  explanation: string | null;
+  option_a: string | null;
+  option_b: string | null;
+  option_c: string | null;
+  option_d: string | null;
+  points: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamAttemptRow {
+  id: string;
+  exam_id: string;
+  user_id: string;
+  status: ExamAttemptStatus;
+  started_at: string;
+  submitted_at: string | null;
+  score: number | null;
+  awarded_points: number | null;
+  total_points: number | null;
+  correct_answers: number | null;
+  total_questions: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamAttemptDraftRow {
+  exam_attempt_id: string;
+  exam_question_id: string;
+  user_answer: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamAnswerRow {
+  id: string;
+  exam_attempt_id: string;
+  exam_question_id: string;
+  user_answer: string;
+  is_correct: boolean;
+  awarded_points: number;
+  created_at: string;
+}
+
+export interface ExamAttemptQuestion {
+  attemptId: string;
+  questionId: string;
+  position: number;
+  questionType: QuizQuestionType;
+  prompt: string;
+  points: number;
+  options?: string[];
+}
+
+export interface ExamSubmissionAnswer {
+  questionId: string;
+  userAnswer: string;
+}
+
+export interface ExamAttemptRuntimeState {
+  deadlineAt: string | null;
+  remainingSeconds: number | null;
+  isTimed: boolean;
+  isExpired: boolean;
+}
+
+export interface ExamAttemptSubmissionResult {
+  attemptId: string;
+  examId: string;
+  status: ExamAttemptStatus;
+  submittedAt: string;
+  score: number;
+  awardedPoints: number;
+  totalPoints: number;
+  correctAnswers: number;
+  totalQuestions: number;
+  durationSeconds: number;
+}
+
+export interface ExamAttemptDraftSaveResult {
+  attemptId: string;
+  examId: string;
+  status: ExamAttemptStatus;
+  deadlineAt: string | null;
+  remainingSeconds: number | null;
+  savedAnswerCount: number;
+  finalized: boolean;
+  submittedAt: string | null;
+  score: number | null;
+  awardedPoints: number | null;
+  totalPoints: number | null;
+  correctAnswers: number | null;
+  totalQuestions: number | null;
+  durationSeconds: number | null;
+}
+
+export interface ExamLeaderboardRow {
+  rank: number;
+  user_id: string;
+  username: string;
+  avatar_url: string | null;
+  role: AppRole;
+  score: number;
+  awarded_points: number;
+  total_points: number;
+  correct_answers: number;
+  total_questions: number;
+  duration_seconds: number;
+  submitted_at: string;
+  is_current_user: boolean;
+}
+
+export interface ExamRankingInsightData {
+  currentUserRank: number | null;
+  currentUserScore: number | null;
+  percentile: number;
+  nextRank: number | null;
+  nextRankScore: number | null;
+  pointsToNextRank: number;
+  progressPercent: number;
+  participantCount: number;
+  averageScore: number;
+  topScore: number;
+  currentUserCorrectAnswers: number | null;
+  currentUserTotalQuestions: number | null;
 }
 
 export interface RankingRow {
