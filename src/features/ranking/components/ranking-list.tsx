@@ -11,9 +11,17 @@ interface RankingListProps {
   previewEntries: RankingLeaderboardEntry[];
   allEntries: RankingLeaderboardEntry[];
   listHasOverflow: boolean;
+  valueHeader?: string;
+  emptyMessage?: string;
 }
 
-export function RankingList({ previewEntries, allEntries, listHasOverflow }: RankingListProps) {
+export function RankingList({
+  previewEntries,
+  allEntries,
+  listHasOverflow,
+  valueHeader = "ĐIỂM XP",
+  emptyMessage = "Bảng xếp hạng sẽ xuất hiện ở đây khi có thêm dữ liệu học tập.",
+}: RankingListProps) {
   const [showAll, setShowAll] = useState(false);
   const entries = showAll ? allEntries : previewEntries;
 
@@ -23,13 +31,13 @@ export function RankingList({ previewEntries, allEntries, listHasOverflow }: Ran
         <span>HẠNG</span>
         <span>NGƯỜI HỌC</span>
         <span>TRẠNG THÁI</span>
-        <span className="text-right">ĐIỂM XP</span>
+        <span className="text-right">{valueHeader}</span>
       </div>
 
       <div className="space-y-2 px-1 py-2 md:px-2 md:py-3">
         {entries.length === 0 ? (
           <div className="rounded-[18px] bg-[#f2f4f6] px-5 py-8 text-center text-sm text-[#424754]">
-            Bảng xếp hạng sẽ xuất hiện ở đây khi có thêm dữ liệu học tập.
+            {emptyMessage}
           </div>
         ) : (
           entries.map((entry) => (
