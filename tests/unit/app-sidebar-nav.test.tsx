@@ -41,6 +41,34 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
   });
 
+  it("shows notifications for students and marks it active on nested notification routes", () => {
+    mockedUsePathname.mockReturnValue("/notifications/history");
+
+    render(<AppSidebarNav role="student" />);
+
+    expect(screen.getByRole("link", { name: "Thông báo" })).toHaveAttribute("href", "/notifications");
+    expect(screen.getByRole("link", { name: "Thông báo" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("shows the classes item for students and marks it active on nested class routes", () => {
+    mockedUsePathname.mockReturnValue("/classes/class-1");
+
+    render(<AppSidebarNav role="student" />);
+
+    expect(screen.getByRole("link", { name: "Lớp học" })).toHaveAttribute("href", "/classes");
+    expect(screen.getByRole("link", { name: "Lớp học" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("shows the exams item for students and marks it active on nested exam routes", () => {
+    mockedUsePathname.mockReturnValue("/exams/123");
+
+    render(<AppSidebarNav role="student" />);
+
+    expect(screen.getByRole("link", { name: "Kỳ thi" })).toHaveAttribute("href", "/exams");
+    expect(screen.getByRole("link", { name: "Kỳ thi" })).toHaveAttribute("aria-current", "page");
+  });
+
   it("hides the roots item for students", () => {
     mockedUsePathname.mockReturnValue("/today");
 
@@ -61,6 +89,15 @@ describe("AppSidebarNav", () => {
     render(<AppSidebarNav role="teacher" />);
 
     expect(screen.getByRole("link", { name: "Gốc từ" })).toHaveAttribute("href", "/roots");
+  });
+
+  it("shows teacher exams and keeps the parent item active for nested teacher exam routes", () => {
+    mockedUsePathname.mockReturnValue("/teacher/exams/123");
+
+    render(<AppSidebarNav role="teacher" />);
+
+    expect(screen.getByRole("link", { name: "Kỳ thi" })).toHaveAttribute("href", "/teacher/exams");
+    expect(screen.getByRole("link", { name: "Kỳ thi" })).toHaveAttribute("aria-current", "page");
   });
 
   it("keeps the parent item active for nested teacher routes", () => {

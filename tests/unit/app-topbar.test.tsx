@@ -54,20 +54,36 @@ describe("AppTopbar", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the figma header content with live search and streak data", () => {
-    render(<AppTopbar profile={profile} streak={7} />);
+  it("renders the figma header content with search-aligned nav menu and streak data", () => {
+    render(<AppTopbar profile={profile} streak={7} unreadNotificationCount={2} />);
 
-    expect(screen.getByDisplayValue("latin")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Tìm từ nguyên, từ gốc hoặc từ vựng...")).toBeInTheDocument();
+    const searchInput = screen.getByRole("searchbox");
+    const searchForm = searchInput.closest("form");
+    const navMenuButton = screen.getByRole("button", { name: "Mở menu điều hướng" });
+
+    expect(searchInput).toHaveValue("latin");
+    expect(searchForm).not.toBeNull();
+    expect(searchForm).toContainElement(navMenuButton);
+    expect(navMenuButton).toHaveClass("lg:hidden");
+    expect(navMenuButton.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("Chuỗi 7 ngày")).toBeInTheDocument();
     expect(screen.getByText("Son Nguyen")).toBeInTheDocument();
-    expect(screen.getByText("Học viên")).toBeInTheDocument();
     expect(screen.getByText("SN")).toBeInTheDocument();
+  });
+
+  it("renders the notifications link with unread badge state", () => {
+    render(<AppTopbar profile={profile} streak={7} unreadNotificationCount={120} />);
+
+    const notificationsLink = screen.getByRole("link", { name: "Mở thông báo, 120 chưa đọc" });
+
+    expect(notificationsLink).toHaveAttribute("href", "/notifications");
+    expect(notificationsLink).toHaveAttribute("title", "120 thông báo chưa đọc");
+    expect(screen.getByText("99+")).toBeInTheDocument();
   });
 
   it("logs out from the profile dropdown", async () => {
     const user = userEvent.setup();
-    render(<AppTopbar profile={profile} streak={7} />);
+    render(<AppTopbar profile={profile} streak={7} unreadNotificationCount={0} />);
 
     await user.click(screen.getByRole("button", { name: "Mở menu hồ sơ" }));
     await user.click(screen.getByRole("menuitem", { name: "Đăng xuất" }));
@@ -77,5 +93,15 @@ describe("AppTopbar", () => {
       expect(mockedPush).toHaveBeenCalledWith("/login");
       expect(mockedRefresh).toHaveBeenCalled();
     });
+  });
+
+  it("opens the profile page from the profile dropdown", async () => {
+    const user = userEvent.setup();
+    render(<AppTopbar profile={profile} streak={7} unreadNotificationCount={0} />);
+
+    await user.click(screen.getByRole("button", { name: "Mở menu hồ sơ" }));
+    await user.click(screen.getByRole("menuitem", { name: "Hồ sơ" }));
+
+    expect(mockedPush).toHaveBeenCalledWith("/profile");
   });
 });
