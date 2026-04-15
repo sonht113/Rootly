@@ -4,6 +4,7 @@ import type { RootWordDetail } from "@/types/domain";
 interface RootArtifactHeroProps {
   rootWord: RootWordDetail;
   nextReviewText: string;
+  hasPlan: boolean;
 }
 
 const LANGUAGE_PATTERN = /\b(Latin|Greek|Old English|Germanic|French|Arabic|Sanskrit)\b/i;
@@ -57,7 +58,7 @@ function getDescriptionCopy(rootWord: RootWordDetail) {
   return `Root này mở ra ${rootWord.words.length} từ liên quan và giúp bạn nhìn ra quy luật từ vựng trong tiếng Anh.`;
 }
 
-export function RootArtifactHero({ rootWord, nextReviewText }: RootArtifactHeroProps) {
+export function RootArtifactHero({ rootWord, nextReviewText, hasPlan }: RootArtifactHeroProps) {
   return (
     <section className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-end xl:gap-12">
       <div className="space-y-5">
@@ -94,6 +95,7 @@ export function RootArtifactHero({ rootWord, nextReviewText }: RootArtifactHeroP
           ]}
           triggerLabel="Thêm vào lịch học"
           triggerVariant="default"
+          disabled={hasPlan}
           triggerClassName="h-14 w-full justify-center rounded-[12px] bg-[#0058be] px-8 text-base font-semibold text-white shadow-[0_18px_44px_rgba(0,88,190,0.22)] hover:bg-[#004ca6]"
         />
         <p className="max-w-[17.5rem] text-sm leading-5 font-medium text-[#64748b]">{nextReviewText}</p>

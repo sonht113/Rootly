@@ -31,7 +31,7 @@ export default async function RootArtifactPage({
 
   return (
     <div className="space-y-8">
-      <RootArtifactHero rootWord={rootWord} nextReviewText={snapshot.nextReviewText} />
+      <RootArtifactHero rootWord={rootWord} nextReviewText={snapshot.nextReviewText} hasPlan={snapshot.hasPlan} />
       <RootWordDetailSections
         rootWord={rootWord}
         summaryAction={

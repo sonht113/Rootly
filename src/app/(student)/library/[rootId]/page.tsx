@@ -6,7 +6,7 @@ import { SchedulePlanDialog } from "@/features/study-plans/components/schedule-p
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getRootWordDetail } from "@/server/repositories/root-words-repository";
 import { getRootWordQuizSummary } from "@/server/repositories/root-word-quizzes-repository";
-import { getRootWordReviewContext } from "@/server/repositories/study-repository";
+import { getRootLearningSnapshot, getRootWordReviewContext } from "@/server/repositories/study-repository";
 
 export default async function RootWordDetailPage({
   params,
@@ -20,8 +20,9 @@ export default async function RootWordDetailPage({
     searchParams ?? Promise.resolve({} as { reviewId?: string }),
   ]);
   const reviewId = resolvedSearchParams.reviewId?.trim() ?? "";
-  const [rootWord, profile, quizSummary, reviewContext] = await Promise.all([
+  const [rootWord, snapshot, profile, quizSummary, reviewContext] = await Promise.all([
     getRootWordDetail(rootId),
+    getRootLearningSnapshot(rootId),
     getCurrentProfile(),
     getRootWordQuizSummary(rootId),
     reviewId ? getRootWordReviewContext(rootId, reviewId) : Promise.resolve(null),
@@ -47,6 +48,7 @@ export default async function RootWordDetailPage({
             ]}
             triggerLabel="Thêm vào lịch học"
             triggerVariant="accent"
+            disabled={snapshot.hasPlan}
           />
         }
       />

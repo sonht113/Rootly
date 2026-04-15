@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RootsImportDialog } from "@/features/root-words/components/roots-import-dialog";
 import { LibraryRootCard } from "@/features/root-words/components/library-root-card";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { cn } from "@/lib/utils/cn";
@@ -67,7 +66,14 @@ export default async function RootsPage({
         </div>
 
         <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
-          {profile?.role === "admin" ? <RootsImportDialog /> : null}
+          {profile?.role === "admin" ? (
+            <Button asChild className="h-11 rounded-[12px] bg-[#0058be] px-5 text-sm font-semibold text-white hover:bg-[#004ca6]">
+              <Link href="/admin/root-words">
+                Quản lý & import nội dung
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </Button>
+          ) : null}
 
           <div className="w-full rounded-[12px] bg-[#f2f4f6] p-1.5 lg:w-auto">
             <div className="flex flex-wrap items-center gap-1.5">

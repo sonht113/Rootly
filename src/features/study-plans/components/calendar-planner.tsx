@@ -15,11 +15,23 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent, type MouseEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { createStudyPlanAction, deleteStudyPlanAction } from "@/features/study-plans/actions/plans";
+import {
+  createStudyPlanAction,
+  deleteStudyPlanAction,
+} from "@/features/study-plans/actions/plans";
 import { SchedulePlanDialog } from "@/features/study-plans/components/schedule-plan-dialog";
 import {
   AlertDialog,
@@ -33,7 +45,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
 import { getWeekRange } from "@/lib/utils/date";
 
@@ -118,6 +136,8 @@ type CalendarEntry =
     };
 
 const NEXT_AVAILABLE_SLOT = "__next_available__";
+const ALL_ROOT_WORDS_SCHEDULED_MESSAGE =
+  "Tat ca tu goc da co trong lich hoc. Hoan thanh hoac xoa lich cu de them lich moi.";
 
 const TONE_STYLES: Record<
   CalendarEntryTone,
@@ -166,12 +186,19 @@ const TONE_STYLES: Record<
   },
 };
 
-export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerProps) {
+export function CalendarPlanner({
+  rootWords,
+  plans,
+  reviews,
+}: CalendarPlannerProps) {
   const router = useRouter();
   const quickAddPanelRef = useRef<HTMLDivElement>(null);
   const [anchorDate, setAnchorDate] = useState(getCalendarToday);
-  const [quickAddRootWordId, setQuickAddRootWordId] = useState(() => rootWords[0]?.id ?? "");
-  const [quickAddScheduleFor, setQuickAddScheduleFor] = useState<QuickAddScheduleChoice>(NEXT_AVAILABLE_SLOT);
+  const [quickAddRootWordId, setQuickAddRootWordId] = useState(
+    () => rootWords[0]?.id ?? "",
+  );
+  const [quickAddScheduleFor, setQuickAddScheduleFor] =
+    useState<QuickAddScheduleChoice>(NEXT_AVAILABLE_SLOT);
   const [isQuickAddPending, startQuickAddTransition] = useTransition();
   const weekRange = getWeekRange(anchorDate);
   const todayKey = getCalendarTodayKey();
@@ -187,22 +214,39 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
       }),
     [weekRange.start],
   );
-  const visibleDateKeys = useMemo(() => new Set(days.map((day) => day.dateKey)), [days]);
+  const visibleDateKeys = useMemo(
+    () => new Set(days.map((day) => day.dateKey)),
+    [days],
+  );
   const plansInView = useMemo(
     () => plans.filter((plan) => visibleDateKeys.has(plan.scheduled_date)),
     [plans, visibleDateKeys],
   );
   const weeklyPlanLookup = useMemo(
-    () => new Set(plansInView.map((plan) => `${plan.root_word.id}:${plan.scheduled_date}`)),
+    () =>
+      new Set(
+        plansInView.map(
+          (plan) => `${plan.root_word.id}:${plan.scheduled_date}`,
+        ),
+      ),
     [plansInView],
   );
-  const plannedRootIdsInView = useMemo(() => new Set(plansInView.map((plan) => plan.root_word.id)), [plansInView]);
-  const prioritizedRootWords = useMemo(() => {
-    const unplanned = rootWords.filter((rootWord) => !plannedRootIdsInView.has(rootWord.id));
-    const planned = rootWords.filter((rootWord) => plannedRootIdsInView.has(rootWord.id));
-    return [...unplanned, ...planned];
-  }, [plannedRootIdsInView, rootWords]);
-  const miniLibraryRoots = useMemo(() => prioritizedRootWords.slice(0, 5), [prioritizedRootWords]);
+  const plannedRootIds = useMemo(
+    () => new Set(plans.map((plan) => plan.root_word.id)),
+    [plans],
+  );
+  const availableRootWords = useMemo(
+    () => rootWords.filter((rootWord) => !plannedRootIds.has(rootWord.id)),
+    [plannedRootIds, rootWords],
+  );
+  const miniLibraryRoots = useMemo(
+    () => availableRootWords.slice(0, 5),
+    [availableRootWords],
+  );
+  const noAvailableRootWordsMessage =
+    rootWords.length > 0
+      ? ALL_ROOT_WORDS_SCHEDULED_MESSAGE
+      : "Hay xuat ban mot vai tu goc truoc de dung tinh nang len lich nhanh.";
 
   const entriesByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEntry[]>();
@@ -255,7 +299,8 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
       grouped.set(
         dateKey,
         [...entries].sort((entryA, entryB) => {
-          const toneOrder = getToneOrder(entryA.tone) - getToneOrder(entryB.tone);
+          const toneOrder =
+            getToneOrder(entryA.tone) - getToneOrder(entryB.tone);
           if (toneOrder !== 0) {
             return toneOrder;
           }
@@ -273,11 +318,21 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
   }, [plans, reviews, todayKey]);
 
   const weekLabel = formatWeekLabel(weekRange.start, weekRange.end);
-  const currentWeekStartKey = format(getWeekRange(getCalendarToday()).start, "yyyy-MM-dd");
-  const isCurrentWeek = format(weekRange.start, "yyyy-MM-dd") === currentWeekStartKey;
-  const quickAddSelectedRoot = rootWords.find((rootWord) => rootWord.id === quickAddRootWordId) ?? null;
+  const currentWeekStartKey = format(
+    getWeekRange(getCalendarToday()).start,
+    "yyyy-MM-dd",
+  );
+  const isCurrentWeek =
+    format(weekRange.start, "yyyy-MM-dd") === currentWeekStartKey;
+  const quickAddSelectedRoot =
+    availableRootWords.find((rootWord) => rootWord.id === quickAddRootWordId) ?? null;
   const resolvedQuickAddDate = quickAddSelectedRoot
-    ? resolveQuickAddDate(quickAddRootWordId, quickAddScheduleFor, days, weeklyPlanLookup)
+    ? resolveQuickAddDate(
+        quickAddRootWordId,
+        quickAddScheduleFor,
+        days,
+        weeklyPlanLookup,
+      )
     : null;
   const quickAddOptions = useMemo<QuickAddOption[]>(
     () => [
@@ -298,13 +353,16 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
     [days],
   );
   const smartSuggestion = useMemo<SmartSuggestion | null>(() => {
-    const suggestedRoot = prioritizedRootWords[0];
+    const suggestedRoot = availableRootWords[0];
     if (!suggestedRoot) {
       return null;
     }
 
     const tomorrowKey = format(addDays(getCalendarToday(), 1), "yyyy-MM-dd");
-    if (visibleDateKeys.has(tomorrowKey) && !weeklyPlanLookup.has(`${suggestedRoot.id}:${tomorrowKey}`)) {
+    if (
+      visibleDateKeys.has(tomorrowKey) &&
+      !weeklyPlanLookup.has(`${suggestedRoot.id}:${tomorrowKey}`)
+    ) {
       return {
         rootWordId: suggestedRoot.id,
         rootLabel: suggestedRoot.root,
@@ -313,22 +371,31 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
       };
     }
 
-    const suggestedDate = getNextAvailableDateKey(suggestedRoot.id, days, weeklyPlanLookup);
+    const suggestedDate = getNextAvailableDateKey(
+      suggestedRoot.id,
+      days,
+      weeklyPlanLookup,
+    );
     return {
       rootWordId: suggestedRoot.id,
       rootLabel: suggestedRoot.root,
       message: `Dựa trên tuần hiện tại, hãy lên lịch cho "${suggestedRoot.root}" vào ${formatDateKeyLabel(suggestedDate)}.`,
       scheduleFor: suggestedDate,
     };
-  }, [days, prioritizedRootWords, visibleDateKeys, weeklyPlanLookup]);
+  }, [availableRootWords, days, visibleDateKeys, weeklyPlanLookup]);
 
   useEffect(() => {
-    if (quickAddRootWordId && rootWords.some((rootWord) => rootWord.id === quickAddRootWordId)) {
+    if (
+      quickAddRootWordId &&
+      availableRootWords.some((rootWord) => rootWord.id === quickAddRootWordId)
+    ) {
       return;
     }
 
-    setQuickAddRootWordId(prioritizedRootWords[0]?.id ?? rootWords[0]?.id ?? "");
-  }, [prioritizedRootWords, quickAddRootWordId, rootWords]);
+    setQuickAddRootWordId(
+      availableRootWords[0]?.id ?? "",
+    );
+  }, [availableRootWords, quickAddRootWordId]);
 
   useEffect(() => {
     if (quickAddScheduleFor === NEXT_AVAILABLE_SLOT) {
@@ -346,12 +413,17 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
       toast.success("Đã xóa lịch học");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Không thể xóa lịch học");
+      toast.error(
+        error instanceof Error ? error.message : "Không thể xóa lịch học",
+      );
       throw error;
     }
   }
 
-  function handlePrefillQuickAdd(rootWordId: string, scheduleFor: QuickAddScheduleChoice = NEXT_AVAILABLE_SLOT) {
+  function handlePrefillQuickAdd(
+    rootWordId: string,
+    scheduleFor: QuickAddScheduleChoice = NEXT_AVAILABLE_SLOT,
+  ) {
     setQuickAddRootWordId(rootWordId);
     setQuickAddScheduleFor(scheduleFor);
     quickAddPanelRef.current?.scrollIntoView({
@@ -368,27 +440,49 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
       return;
     }
 
-    const scheduledDate = resolveQuickAddDate(quickAddRootWordId, quickAddScheduleFor, days, weeklyPlanLookup);
-    const selectedRoot = rootWords.find((rootWord) => rootWord.id === quickAddRootWordId);
+    const scheduledDate = resolveQuickAddDate(
+      quickAddRootWordId,
+      quickAddScheduleFor,
+      days,
+      weeklyPlanLookup,
+    );
+    const selectedRoot = availableRootWords.find(
+      (rootWord) => rootWord.id === quickAddRootWordId,
+    );
+
+    if (!selectedRoot) {
+      toast.error(ALL_ROOT_WORDS_SCHEDULED_MESSAGE);
+      return;
+    }
 
     if (
       quickAddScheduleFor !== NEXT_AVAILABLE_SLOT &&
       weeklyPlanLookup.has(`${quickAddRootWordId}:${scheduledDate}`)
     ) {
-      toast.error(`${selectedRoot?.root ?? "Từ gốc này"} đã được lên lịch cho ngày đó.`);
+      toast.error(
+        `${selectedRoot?.root ?? "Từ gốc này"} đã được lên lịch cho ngày đó.`,
+      );
       return;
     }
 
     startQuickAddTransition(async () => {
-      await createStudyPlanAction({
-        rootWordId: quickAddRootWordId,
-        scheduledDate,
-        source: "manual",
-      });
+      try {
+        await createStudyPlanAction({
+          rootWordId: quickAddRootWordId,
+          scheduledDate,
+          source: "manual",
+        });
 
-      toast.success(`Đã lên lịch ${selectedRoot?.root ?? "từ gốc"} cho ${formatDateKeyLabel(scheduledDate)}.`);
-      setQuickAddScheduleFor(NEXT_AVAILABLE_SLOT);
-      router.refresh();
+        toast.success(
+        `Đã lên lịch ${selectedRoot?.root ?? "từ gốc"} cho ${formatDateKeyLabel(scheduledDate)}.`,
+      );
+        setQuickAddScheduleFor(NEXT_AVAILABLE_SLOT);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Khong the tao lich hoc.",
+        );
+      }
     });
   }
 
@@ -412,7 +506,9 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
                   type="button"
                   aria-label="Xem tuần trước"
                   className="flex size-9 items-center justify-center rounded-[12px] text-[#191c1e] transition hover:bg-white"
-                  onClick={() => setAnchorDate((current) => subWeeks(current, 1))}
+                  onClick={() =>
+                    setAnchorDate((current) => subWeeks(current, 1))
+                  }
                 >
                   <ChevronLeft className="size-4" />
                 </button>
@@ -420,7 +516,9 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
                   type="button"
                   className={cn(
                     "min-w-[7.25rem] rounded-[12px] px-4 py-2 text-sm font-semibold transition",
-                    isCurrentWeek ? "bg-white text-[#191c1e]" : "text-[#191c1e] hover:bg-white/75",
+                    isCurrentWeek
+                      ? "bg-white text-[#191c1e]"
+                      : "text-[#191c1e] hover:bg-white/75",
                   )}
                   onClick={() => setAnchorDate(getCalendarToday())}
                 >
@@ -430,7 +528,9 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
                   type="button"
                   aria-label="Xem tuần sau"
                   className="flex size-9 items-center justify-center rounded-[12px] text-[#191c1e] transition hover:bg-white"
-                  onClick={() => setAnchorDate((current) => addWeeks(current, 1))}
+                  onClick={() =>
+                    setAnchorDate((current) => addWeeks(current, 1))
+                  }
                 >
                   <ChevronRight className="size-4" />
                 </button>
@@ -438,8 +538,9 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
 
               <div className="xl:hidden">
                 <SchedulePlanDialog
-                  rootWords={rootWords}
+                  rootWords={availableRootWords}
                   dateOptions={scheduleDialogDateOptions}
+                  emptyStateMessage={noAvailableRootWordsMessage}
                   triggerLabel="Thêm lịch"
                   triggerVariant="outline"
                   triggerClassName="h-11 rounded-[16px] border-[#dbe5f0] bg-white px-4 text-[#191c1e] shadow-[0_10px_24px_rgba(15,23,42,0.06)] hover:bg-[#f8fbff]"
@@ -448,16 +549,17 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
             </div>
           </div>
 
-          <div className="overflow-x-auto pb-2">
-            <div className="grid min-w-[960px] grid-cols-7 gap-4 xl:min-w-0">
+          <div className="overflow-x-auto pb-2 xl:max-w-[68rem]">
+            <div className="grid min-w-[1168px] grid-cols-7 gap-4 lg:min-w-[1264px] xl:min-w-[1312px]">
               {days.map(({ date, dateKey }) => (
                 <CalendarDayColumn
                   key={dateKey}
                   date={date}
                   dateKey={dateKey}
                   entries={entriesByDate.get(dateKey) ?? []}
-                  rootWords={rootWords}
+                  rootWords={availableRootWords}
                   dateOptions={scheduleDialogDateOptions}
+                  emptyStateMessage={noAvailableRootWordsMessage}
                   todayKey={todayKey}
                   onDeletePlan={handleDelete}
                 />
@@ -468,13 +570,14 @@ export function CalendarPlanner({ rootWords, plans, reviews }: CalendarPlannerPr
 
         <CalendarSideRail
           panelRef={quickAddPanelRef}
-          rootWords={rootWords}
+          rootWords={availableRootWords}
           quickAddRootWordId={quickAddRootWordId}
           quickAddScheduleFor={quickAddScheduleFor}
           quickAddOptions={quickAddOptions}
           quickAddResolvedDate={resolvedQuickAddDate}
           miniLibraryRoots={miniLibraryRoots}
           smartSuggestion={smartSuggestion}
+          emptyStateMessage={noAvailableRootWordsMessage}
           isPending={isQuickAddPending}
           onRootWordChange={setQuickAddRootWordId}
           onScheduleForChange={setQuickAddScheduleFor}
@@ -495,6 +598,7 @@ interface CalendarSideRailProps {
   quickAddResolvedDate: string | null;
   miniLibraryRoots: Array<{ id: string; root: string; meaning: string }>;
   smartSuggestion: SmartSuggestion | null;
+  emptyStateMessage: string;
   isPending: boolean;
   onRootWordChange: (value: string) => void;
   onScheduleForChange: (value: QuickAddScheduleChoice) => void;
@@ -511,6 +615,7 @@ function CalendarSideRail({
   quickAddResolvedDate,
   miniLibraryRoots,
   smartSuggestion,
+  emptyStateMessage,
   isPending,
   onRootWordChange,
   onScheduleForChange,
@@ -526,6 +631,7 @@ function CalendarSideRail({
         quickAddScheduleFor={quickAddScheduleFor}
         quickAddOptions={quickAddOptions}
         quickAddResolvedDate={quickAddResolvedDate}
+        emptyStateMessage={emptyStateMessage}
         isPending={isPending}
         onRootWordChange={onRootWordChange}
         onScheduleForChange={onScheduleForChange}
@@ -534,6 +640,7 @@ function CalendarSideRail({
       <MiniLibraryPicker
         miniLibraryRoots={miniLibraryRoots}
         smartSuggestion={smartSuggestion}
+        emptyStateMessage={emptyStateMessage}
         onUseRoot={onUseRoot}
       />
     </aside>
@@ -547,6 +654,7 @@ interface QuickAddPanelProps {
   quickAddScheduleFor: QuickAddScheduleChoice;
   quickAddOptions: QuickAddOption[];
   quickAddResolvedDate: string | null;
+  emptyStateMessage: string;
   isPending: boolean;
   onRootWordChange: (value: string) => void;
   onScheduleForChange: (value: QuickAddScheduleChoice) => void;
@@ -560,6 +668,7 @@ function QuickAddPanel({
   quickAddScheduleFor,
   quickAddOptions,
   quickAddResolvedDate,
+  emptyStateMessage,
   isPending,
   onRootWordChange,
   onScheduleForChange,
@@ -582,7 +691,9 @@ function QuickAddPanel({
       {rootWords.length > 0 ? (
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#424754]">Từ gốc</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#424754]">
+              Từ gốc
+            </label>
             <Select value={quickAddRootWordId} onValueChange={onRootWordChange}>
               <SelectTrigger className="h-11 border-transparent bg-[#e0e3e5] text-[#191c1e] shadow-none focus:ring-[#bfd5ff]">
                 <SelectValue placeholder="Chọn từ gốc" />
@@ -598,8 +709,15 @@ function QuickAddPanel({
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#424754]">Lên lịch cho</label>
-            <Select value={quickAddScheduleFor} onValueChange={(value) => onScheduleForChange(value as QuickAddScheduleChoice)}>
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#424754]">
+              Lên lịch cho
+            </label>
+            <Select
+              value={quickAddScheduleFor}
+              onValueChange={(value) =>
+                onScheduleForChange(value as QuickAddScheduleChoice)
+              }
+            >
               <SelectTrigger className="h-11 border-transparent bg-[#e0e3e5] text-[#191c1e] shadow-none focus:ring-[#bfd5ff]">
                 <SelectValue placeholder="Chọn khung thời gian" />
               </SelectTrigger>
@@ -611,8 +729,11 @@ function QuickAddPanel({
                 ))}
               </SelectContent>
             </Select>
-            {quickAddScheduleFor === NEXT_AVAILABLE_SLOT && quickAddResolvedDate ? (
-              <p className="text-xs text-[#6b7280]">Sẽ xếp vào {formatDateKeyLabel(quickAddResolvedDate)}.</p>
+            {quickAddScheduleFor === NEXT_AVAILABLE_SLOT &&
+            quickAddResolvedDate ? (
+              <p className="text-xs text-[#6b7280]">
+                Sẽ xếp vào {formatDateKeyLabel(quickAddResolvedDate)}.
+              </p>
             ) : null}
           </div>
 
@@ -637,17 +758,25 @@ function QuickAddPanel({
 interface MiniLibraryPickerProps {
   miniLibraryRoots: Array<{ id: string; root: string; meaning: string }>;
   smartSuggestion: SmartSuggestion | null;
+  emptyStateMessage: string;
   onUseRoot: (rootWordId: string, scheduleFor?: QuickAddScheduleChoice) => void;
 }
 
-function MiniLibraryPicker({ miniLibraryRoots, smartSuggestion, onUseRoot }: MiniLibraryPickerProps) {
+function MiniLibraryPicker({
+  miniLibraryRoots,
+  smartSuggestion,
+  emptyStateMessage,
+  onUseRoot,
+}: MiniLibraryPickerProps) {
   return (
     <div className="overflow-hidden rounded-[24px] bg-[#f2f4f6] shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
       <div className="space-y-2 px-6 pt-6">
         <h2 className="font-[family:var(--font-display)] text-[1.25rem] font-bold tracking-[-0.02em] text-[#191c1e]">
           Thư viện mini
         </h2>
-        <p className="text-sm leading-5 text-[#424754]">Chạm vào bất kỳ từ gốc nào để đưa vào phần thêm nhanh.</p>
+        <p className="text-sm leading-5 text-[#424754]">
+          Chạm vào bất kỳ từ gốc nào để đưa vào phần thêm nhanh.
+        </p>
       </div>
 
       <div className="mt-2 space-y-3 px-4 pb-6">
@@ -660,8 +789,12 @@ function MiniLibraryPicker({ miniLibraryRoots, smartSuggestion, onUseRoot }: Min
               onClick={() => onUseRoot(rootWord.id, NEXT_AVAILABLE_SLOT)}
             >
               <div className="min-w-0">
-                <p className="text-base font-semibold leading-6 text-[#191c1e] lowercase">{rootWord.root}</p>
-                <p className="mt-0.5 truncate text-[11px] leading-4 text-[#424754]">{rootWord.meaning}</p>
+                <p className="text-base font-semibold leading-6 text-[#191c1e] lowercase">
+                  {rootWord.root}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] leading-4 text-[#424754]">
+                  {rootWord.meaning}
+                </p>
               </div>
               <span className="ml-4 flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#f2f4f6] text-[#727785]">
                 <ArrowUpRight className="size-4" />
@@ -679,23 +812,35 @@ function MiniLibraryPicker({ miniLibraryRoots, smartSuggestion, onUseRoot }: Min
         {smartSuggestion ? (
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0058be]">Gợi ý thông minh</p>
-              <p className="text-sm leading-5 text-[#191c1e]">{smartSuggestion.message}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0058be]">
+                Gợi ý thông minh
+              </p>
+              <p className="text-sm leading-5 text-[#191c1e]">
+                {smartSuggestion.message}
+              </p>
             </div>
             <button
               type="button"
               aria-label={`Dùng gợi ý cho ${smartSuggestion.rootLabel}`}
               className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-white text-[#0058be] transition hover:bg-[#e9f1ff]"
-              onClick={() => onUseRoot(smartSuggestion.rootWordId, smartSuggestion.scheduleFor)}
+              onClick={() =>
+                onUseRoot(
+                  smartSuggestion.rootWordId,
+                  smartSuggestion.scheduleFor,
+                )
+              }
             >
               <ArrowUpRight className="size-4" />
             </button>
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0058be]">Gợi ý thông minh</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#0058be]">
+              Gợi ý thông minh
+            </p>
             <p className="text-sm leading-5 text-[#191c1e]">
-              Tuần này đã được sắp xếp ổn. Bạn có thể thêm buổi ôn tập hoặc khám phá từ gốc khác.
+              Tuần này đã được sắp xếp ổn. Bạn có thể thêm buổi ôn tập hoặc khám
+              phá từ gốc khác.
             </p>
           </div>
         )}
@@ -710,11 +855,21 @@ interface CalendarDayColumnProps {
   entries: CalendarEntry[];
   rootWords: Array<{ id: string; root: string; meaning: string }>;
   dateOptions: ScheduleDialogDateOption[];
+  emptyStateMessage: string;
   todayKey: string;
   onDeletePlan: (planId: string) => Promise<void>;
 }
 
-function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, todayKey, onDeletePlan }: CalendarDayColumnProps) {
+function CalendarDayColumn({
+  date,
+  dateKey,
+  entries,
+  rootWords,
+  dateOptions,
+  emptyStateMessage,
+  todayKey,
+  onDeletePlan,
+}: CalendarDayColumnProps) {
   const isSunday = date.getDay() === 0;
   const isToday = dateKey === todayKey;
   const dayLabelClassName = cn(
@@ -736,9 +891,13 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
       <div className="flex items-end justify-between px-1">
         <div className="flex items-center gap-2">
           <p className={dayLabelClassName}>{formatWeekdayShortLabel(date)}</p>
-          {isToday ? <span className="inline-flex size-2 rounded-full bg-[#2563eb]" /> : null}
+          {isToday ? (
+            <span className="inline-flex size-2 rounded-full bg-[#2563eb]" />
+          ) : null}
         </div>
-        <p className="text-xs font-medium text-[#424754]">{formatDayOfMonthLabel(date)}</p>
+        <p className="text-xs font-medium text-[#424754]">
+          {formatDayOfMonthLabel(date)}
+        </p>
       </div>
 
       <div
@@ -751,15 +910,20 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
           <>
             <div className="flex flex-1 flex-col gap-3">
               {entries.map((entry) => (
-                <CalendarEntryCard key={entry.id} entry={entry} onDeletePlan={onDeletePlan} />
+                <CalendarEntryCard
+                  key={entry.id}
+                  entry={entry}
+                  onDeletePlan={onDeletePlan}
+                />
               ))}
             </div>
 
             <div className="mt-3">
-              <SchedulePlanDialog
-                rootWords={rootWords}
-                dateOptions={dateOptions}
-                defaultValues={addButtonDefaults}
+                <SchedulePlanDialog
+                  rootWords={rootWords}
+                  dateOptions={dateOptions}
+                  emptyStateMessage={emptyStateMessage}
+                  defaultValues={addButtonDefaults}
                 triggerLabel=""
                 triggerVariant="outline"
                 triggerSize="icon"
@@ -774,13 +938,17 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
             <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-[#fef3c7] text-[#994100]">
               <Sparkles className="size-5" />
             </div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7c5b00]">Ngày bắt kịp</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7c5b00]">
+              Ngày bắt kịp
+            </p>
             <p className="mt-3 max-w-[9rem] text-xs leading-5 text-[#727785]">
-              Chưa có mục nào được lên lịch. Hãy dùng ngày này để xử lý các từ gốc bị quá hạn.
+              Chưa có mục nào được lên lịch. Hãy dùng ngày này để xử lý các từ
+              gốc bị quá hạn.
             </p>
             <SchedulePlanDialog
               rootWords={rootWords}
               dateOptions={dateOptions}
+              emptyStateMessage={emptyStateMessage}
               defaultValues={addButtonDefaults}
               triggerLabel=""
               triggerVariant="outline"
@@ -795,7 +963,7 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#727785]">
                 <CircleDashed className="size-3.5" />
-                <span>Khung trống</span>
+                <span className="whitespace-nowrap">Khung trống</span>
               </div>
               <p className="max-w-[10rem] text-sm leading-6 text-[#727785]">
                 Chưa có lịch học hoặc lịch ôn tập nào được lên trong ngày này.
@@ -805,6 +973,7 @@ function CalendarDayColumn({ date, dateKey, entries, rootWords, dateOptions, tod
             <SchedulePlanDialog
               rootWords={rootWords}
               dateOptions={dateOptions}
+              emptyStateMessage={emptyStateMessage}
               defaultValues={addButtonDefaults}
               triggerLabel=""
               triggerVariant="outline"
@@ -832,14 +1001,16 @@ function CalendarEntryCard({ entry, onDeletePlan }: CalendarEntryCardProps) {
     <article className={cn("rounded-[18px] p-3", tone.card)}>
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em]">
         {getEntryIcon(entry)}
-        <span>{entry.label}</span>
+        <span className="whitespace-nowrap">{entry.label}</span>
       </div>
 
       <div className="mt-3 space-y-1">
         <p className="break-words font-[family:var(--font-display)] text-lg leading-5 font-bold lowercase">
           {entry.title}
         </p>
-        <p className="break-words text-xs leading-4 opacity-90">{entry.description}</p>
+        <p className="break-words text-xs leading-4 opacity-90">
+          {entry.description}
+        </p>
       </div>
 
       {entry.kind === "plan" ? (
@@ -848,9 +1019,12 @@ function CalendarEntryCard({ entry, onDeletePlan }: CalendarEntryCardProps) {
             asChild
             variant="ghost"
             size="sm"
-            className={cn("h-8 w-full justify-center rounded-[10px]", tone.secondaryAction)}
+            className={cn(
+              "h-8 w-full justify-center rounded-[10px]",
+              tone.secondaryAction,
+            )}
           >
-            <Link href={`/library/${entry.rootWordId}`}>Xem chi tiết</Link>
+            <Link href={`/library/${entry.rootWordId}`}>học ngay</Link>
           </Button>
           <DeletePlanButton
             planId={entry.id}
@@ -865,9 +1039,14 @@ function CalendarEntryCard({ entry, onDeletePlan }: CalendarEntryCardProps) {
             asChild
             variant="ghost"
             size="sm"
-            className={cn("h-8 w-full justify-center rounded-[10px]", tone.secondaryAction)}
+            className={cn(
+              "h-8 w-full justify-center rounded-[10px]",
+              tone.secondaryAction,
+            )}
           >
-            <Link href={`/library/${entry.rootWordId}?reviewId=${entry.id}`}>Ôn tập</Link>
+            <Link href={`/library/${entry.rootWordId}?reviewId=${entry.id}`}>
+              Ôn tập
+            </Link>
           </Button>
         </div>
       )}
@@ -882,7 +1061,12 @@ interface DeletePlanButtonProps {
   onDeletePlan: (planId: string) => Promise<void>;
 }
 
-function DeletePlanButton({ planId, title, className, onDeletePlan }: DeletePlanButtonProps) {
+function DeletePlanButton({
+  planId,
+  title,
+  className,
+  onDeletePlan,
+}: DeletePlanButtonProps) {
   const [open, setOpen] = useState(false);
   const [isDeletePending, startDeleteTransition] = useTransition();
 
@@ -908,7 +1092,11 @@ function DeletePlanButton({ planId, title, className, onDeletePlan }: DeletePlan
           disabled={isDeletePending}
           aria-label={`Xóa lịch học cho ${title}`}
         >
-          {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          {isDeletePending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Trash2 className="size-4" />
+          )}
           <span>Xóa</span>
         </Button>
       </AlertDialogTrigger>
@@ -917,7 +1105,8 @@ function DeletePlanButton({ planId, title, className, onDeletePlan }: DeletePlan
         <AlertDialogHeader>
           <AlertDialogTitle>Xóa lịch học này?</AlertDialogTitle>
           <AlertDialogDescription>
-            Lịch học của từ gốc <strong>{title}</strong> sẽ bị xóa khỏi lịch tuần hiện tại. Bạn có thể thêm lại sau.
+            Lịch học của từ gốc <strong>{title}</strong> sẽ bị xóa khỏi lịch
+            tuần hiện tại. Bạn có thể thêm lại sau.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -928,7 +1117,9 @@ function DeletePlanButton({ planId, title, className, onDeletePlan }: DeletePlan
             disabled={isDeletePending}
             onClick={handleConfirm}
           >
-            {isDeletePending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {isDeletePending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : null}
             Xóa
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -956,7 +1147,11 @@ function getEntryIcon(entry: CalendarEntry) {
   }
 }
 
-function getPlanTone(status: string, dateKey: string, todayKey: string): CalendarEntryTone {
+function getPlanTone(
+  status: string,
+  dateKey: string,
+  todayKey: string,
+): CalendarEntryTone {
   if (status === "completed") {
     return dateKey < todayKey ? "completedOverdue" : "completedSuccess";
   }
@@ -972,7 +1167,11 @@ function getPlanTone(status: string, dateKey: string, todayKey: string): Calenda
   return "learning";
 }
 
-function getReviewTone(status: string, dateKey: string, todayKey: string): CalendarEntryTone {
+function getReviewTone(
+  status: string,
+  dateKey: string,
+  todayKey: string,
+): CalendarEntryTone {
   if (status === "done") {
     return "done";
   }
@@ -1086,8 +1285,14 @@ function getNextAvailableDateKey(
   days: Array<{ date: Date; dateKey: string }>,
   weeklyPlanLookup: Set<string>,
 ) {
-  const firstOpenDay = days.find((day) => !weeklyPlanLookup.has(`${rootWordId}:${day.dateKey}`));
-  return firstOpenDay?.dateKey ?? days[days.length - 1]?.dateKey ?? getCalendarTodayKey();
+  const firstOpenDay = days.find(
+    (day) => !weeklyPlanLookup.has(`${rootWordId}:${day.dateKey}`),
+  );
+  return (
+    firstOpenDay?.dateKey ??
+    days[days.length - 1]?.dateKey ??
+    getCalendarTodayKey()
+  );
 }
 
 function resolveQuickAddDate(
