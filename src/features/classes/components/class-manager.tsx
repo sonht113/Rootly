@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, PlusCircle, Search, Trash2, UserPlus } from "lucide-react";
@@ -105,15 +105,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
     latestSearchRequestRef.current += 1;
     const requestId = latestSearchRequestRef.current;
 
-    if (normalizedQuery.length === 0) {
-      setCandidates([]);
-      setSearchMessage(null);
-      return;
-    }
-
-    if (normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
-      setCandidates([]);
-      setSearchMessage(`Hãy nhập ít nhất ${MIN_MEMBER_SEARCH_LENGTH} ký tự để tìm học viên.`);
+    if (normalizedQuery.length === 0 || normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
       return;
     }
 
@@ -135,7 +127,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
         }
 
         setCandidates(result.items);
-        setSearchMessage(result.items.length === 0 ? "Không tìm thấy học viên phù hợp." : null);
+        setSearchMessage(result.items.length === 0 ? "Kh\u00f4ng t\u00ecm th\u1ea5y h\u1ecdc vi\u00ean ph\u00f9 h\u1ee3p." : null);
         setSelectedCandidate((current) =>
           current && result.items.some((item) => item.userId === current.userId) ? current : null,
         );
@@ -150,6 +142,21 @@ export function AddMemberForm({ classId }: { classId: string }) {
   function handleCandidateSearchChange(value: string) {
     setQuery(value);
     setSelectedCandidate(null);
+
+    const normalizedQuery = normalizeProfileSearchText(value);
+    if (normalizedQuery.length === 0) {
+      setCandidates([]);
+      setSearchMessage(null);
+      return;
+    }
+
+    if (normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
+      setCandidates([]);
+      setSearchMessage(`H\u00e3y nh\u1eadp \u00edt nh\u1ea5t ${MIN_MEMBER_SEARCH_LENGTH} k\u00fd t\u1ef1 \u0111\u1ec3 t\u00ecm h\u1ecdc vi\u00ean.`);
+      return;
+    }
+
+    setSearchMessage(null);
   }
 
   function handleSelectCandidate(candidate: ClassMemberCandidate) {

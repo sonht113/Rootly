@@ -51,23 +51,24 @@ export function ExamAttemptRunner({
   const [answers, setAnswers] = useState<Record<string, string>>(() => buildAnswerMap(initialAnswers));
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [lastSavedPayload, setLastSavedPayload] = useState(() =>
+    serializeAnswers(buildSubmissionPayload(questions, buildAnswerMap(initialAnswers))),
+  );
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(runtime?.remainingSeconds ?? null);
 
   const answersRef = useRef(answers);
   const autoSaveTimerRef = useRef<number | null>(null);
   const finalizingRef = useRef(false);
-  const deadlineAtRef = useRef(runtime?.deadlineAt ?? null);
-  const lastSavedPayloadRef = useRef(serializeAnswers(buildSubmissionPayload(questions, buildAnswerMap(initialAnswers))));
-
-  answersRef.current = answers;
-  deadlineAtRef.current = runtime?.deadlineAt ?? null;
+  const lastSavedPayloadRef = useRef(lastSavedPayload);
 
   const submissionPayload = useMemo(() => buildSubmissionPayload(questions, answers), [answers, questions]);
   const serializedPayload = useMemo(() => serializeAnswers(submissionPayload), [submissionPayload]);
-  const hasPendingChanges = serializedPayload !== lastSavedPayloadRef.current;
+  const hasPendingChanges = serializedPayload !== lastSavedPayload;
   const question = questions[currentIndex];
   const currentAnswer = question ? answers[question.questionId] ?? "" : "";
-  const isBusy = isSubmitting || finalizingRef.current;
+  const isBusy = isSubmitting || isFinalizing;
+  const effectiveRemainingSeconds = runtime?.deadlineAt ? remainingSeconds : null;
 
   const answeredCount = useMemo(
     () => questions.filter((entry) => (answers[entry.questionId] ?? "").trim().length > 0).length,
@@ -78,76 +79,94 @@ export function ExamAttemptRunner({
     [answeredCount, questions.length],
   );
 
-  const saveDraft = useEffectEvent(
-    async ({ silent = false, allowWhileFinalizing = false }: { silent?: boolean; allowWhileFinalizing?: boolean } = {}) => {
-      if (finalizingRef.current && !allowWhileFinalizing) {
-        return { ok: false, finalized: true };
-      }
+  function setFinalizing(nextValue: boolean) {
+    finalizingRef.current = nextValue;
+    setIsFinalizing(nextValue);
+  }
 
-      const payload = buildSubmissionPayload(questions, answersRef.current);
-      const payloadKey = serializeAnswers(payload);
-      if (payloadKey === lastSavedPayloadRef.current) {
-        return { ok: true, finalized: false };
-      }
+  function setSavedPayload(payloadKey: string) {
+    lastSavedPayloadRef.current = payloadKey;
+    setLastSavedPayload(payloadKey);
+  }
 
-      setSaveState("saving");
+  async function saveDraft({
+    silent = false,
+    allowWhileFinalizing = false,
+  }: {
+    silent?: boolean;
+    allowWhileFinalizing?: boolean;
+  } = {}) {
+    if (finalizingRef.current && !allowWhileFinalizing) {
+      return { ok: false, finalized: true };
+    }
 
-      try {
-        const response = await fetch(`/api/exams/attempts/${attemptId}/draft`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ answers: payload }),
-        });
+    const payload = buildSubmissionPayload(questions, answersRef.current);
+    const payloadKey = serializeAnswers(payload);
+    if (payloadKey === lastSavedPayloadRef.current) {
+      return { ok: true, finalized: false };
+    }
 
-        const result = (await response.json()) as DraftResponse;
-        if (!response.ok) {
-          setSaveState("error");
-          if (!silent) {
-            toast.error(result.message ?? "Khong the luu nhap bai thi.");
-          }
-          if (response.status === 409) {
-            finalizingRef.current = true;
-            router.refresh();
-            return { ok: false, finalized: true };
-          }
-          return { ok: false, finalized: false };
-        }
+    setSaveState("saving");
 
-        if (result.finalized) {
-          finalizingRef.current = true;
-          setSaveState("saved");
-          setRemainingSeconds(0);
-          toast.success(
-            result.status === "expired"
-              ? "Het gio lam bai. He thong da tu chot bai cua ban."
-              : "Bai thi da duoc chot.",
-          );
-          router.refresh();
-          return { ok: true, finalized: true };
-        }
+    try {
+      const response = await fetch(`/api/exams/attempts/${attemptId}/draft`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ answers: payload }),
+      });
 
-        lastSavedPayloadRef.current = payloadKey;
-        setLastSavedAt(Date.now());
-        setSaveState("saved");
-        return { ok: true, finalized: false };
-      } catch (error) {
+      const result = (await response.json()) as DraftResponse;
+      if (!response.ok) {
         setSaveState("error");
         if (!silent) {
-          toast.error(error instanceof Error ? error.message : "Khong the luu nhap bai thi.");
+          toast.error(result.message ?? "Khong the luu nhap bai thi.");
+        }
+        if (response.status === 409) {
+          setFinalizing(true);
+          router.refresh();
+          return { ok: false, finalized: true };
         }
         return { ok: false, finalized: false };
       }
-    },
-  );
 
-  const finalizeAttempt = useEffectEvent((reason: "manual" | "timeout") => {
+      if (result.finalized) {
+        setFinalizing(true);
+        setSaveState("saved");
+        setRemainingSeconds(0);
+        toast.success(
+          result.status === "expired"
+            ? "Het gio lam bai. He thong da tu chot bai cua ban."
+            : "Bai thi da duoc chot.",
+        );
+        router.refresh();
+        return { ok: true, finalized: true };
+      }
+
+      setSavedPayload(payloadKey);
+      setLastSavedAt(Date.now());
+      setSaveState("saved");
+      return { ok: true, finalized: false };
+    } catch (error) {
+      setSaveState("error");
+      if (!silent) {
+        toast.error(error instanceof Error ? error.message : "Khong the luu nhap bai thi.");
+      }
+      return { ok: false, finalized: false };
+    }
+  }
+
+  const saveDraftEffect = useEffectEvent((options?: { silent?: boolean; allowWhileFinalizing?: boolean }) => {
+    void saveDraft(options);
+  });
+
+  function finalizeAttempt(reason: "manual" | "timeout") {
     if (finalizingRef.current) {
       return;
     }
 
-    finalizingRef.current = true;
+    setFinalizing(true);
     if (autoSaveTimerRef.current) {
       window.clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
@@ -158,30 +177,31 @@ export function ExamAttemptRunner({
         const saveResult = await saveDraft({ silent: reason === "timeout", allowWhileFinalizing: true });
         if (!saveResult.ok || saveResult.finalized) {
           if (!saveResult.ok && !saveResult.finalized) {
-            finalizingRef.current = false;
+            setFinalizing(false);
           }
           return;
         }
 
+        const payload = buildSubmissionPayload(questions, answersRef.current);
         const response = await fetch(`/api/exams/attempts/${attemptId}/submit`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            answers: buildSubmissionPayload(questions, answersRef.current),
+            answers: payload,
           }),
         });
 
         const result = (await response.json()) as SubmitResponse;
         if (!response.ok) {
-          finalizingRef.current = false;
+          setFinalizing(false);
           toast.error(result.message ?? "Khong the nop bai thi.");
           return;
         }
 
         setSaveState("saved");
-        lastSavedPayloadRef.current = serializeAnswers(buildSubmissionPayload(questions, answersRef.current));
+        setSavedPayload(serializeAnswers(payload));
         setRemainingSeconds(0);
         toast.success(
           result.status === "expired"
@@ -190,10 +210,14 @@ export function ExamAttemptRunner({
         );
         router.refresh();
       } catch (error) {
-        finalizingRef.current = false;
+        setFinalizing(false);
         toast.error(error instanceof Error ? error.message : "Khong the nop bai thi.");
       }
     });
+  }
+
+  const finalizeAttemptOnTimeout = useEffectEvent(() => {
+    finalizeAttempt("timeout");
   });
 
   useEffect(() => {
@@ -206,12 +230,12 @@ export function ExamAttemptRunner({
       autoSaveTimerRef.current = null;
     }
 
-    if (!hasPendingChanges || finalizingRef.current) {
+    if (!hasPendingChanges || isFinalizing) {
       return;
     }
 
     autoSaveTimerRef.current = window.setTimeout(() => {
-      void saveDraft({ silent: true });
+      saveDraftEffect({ silent: true });
     }, 1200);
 
     return () => {
@@ -220,12 +244,11 @@ export function ExamAttemptRunner({
         autoSaveTimerRef.current = null;
       }
     };
-  }, [hasPendingChanges, questions.length, serializedPayload]);
+  }, [hasPendingChanges, isFinalizing, questions.length, serializedPayload]);
 
   useEffect(() => {
-    const deadlineAt = deadlineAtRef.current;
+    const deadlineAt = runtime?.deadlineAt ?? null;
     if (!deadlineAt) {
-      setRemainingSeconds(null);
       return;
     }
 
@@ -242,14 +265,14 @@ export function ExamAttemptRunner({
   }, [runtime?.deadlineAt]);
 
   useEffect(() => {
-    if (!deadlineAtRef.current || finalizingRef.current) {
+    if (!runtime?.deadlineAt || isFinalizing) {
       return;
     }
 
-    if (remainingSeconds !== null && remainingSeconds <= 0) {
-      finalizeAttempt("timeout");
+    if (effectiveRemainingSeconds !== null && effectiveRemainingSeconds <= 0) {
+      finalizeAttemptOnTimeout();
     }
-  }, [remainingSeconds]);
+  }, [isFinalizing, effectiveRemainingSeconds, runtime?.deadlineAt]);
 
   if (questions.length === 0 || !question) {
     return (
@@ -262,14 +285,18 @@ export function ExamAttemptRunner({
   }
 
   function updateAnswer(questionId: string, nextAnswer: string) {
-    if (finalizingRef.current) {
+    if (isFinalizing) {
       return;
     }
 
-    setAnswers((state) => ({
-      ...state,
-      [questionId]: nextAnswer,
-    }));
+    setAnswers((state) => {
+      const nextState = {
+        ...state,
+        [questionId]: nextAnswer,
+      };
+      answersRef.current = nextState;
+      return nextState;
+    });
   }
 
   return (
@@ -292,8 +319,10 @@ export function ExamAttemptRunner({
           </div>
 
           {runtime?.isTimed ? (
-            <Badge variant={remainingSeconds !== null && remainingSeconds <= 60 ? "danger" : "warning"}>
-              Con lai {formatExamDuration(remainingSeconds ?? 0)}
+            <Badge
+              variant={effectiveRemainingSeconds !== null && effectiveRemainingSeconds <= 60 ? "danger" : "warning"}
+            >
+              Con lai {formatExamDuration(effectiveRemainingSeconds ?? 0)}
             </Badge>
           ) : (
             <Badge variant="outline">Khong gioi han thoi gian</Badge>

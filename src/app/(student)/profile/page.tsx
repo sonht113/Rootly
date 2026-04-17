@@ -58,7 +58,7 @@ export default async function ProfilePage() {
         </Card>
       </div>
 
-      <ProfileSettingsForm profile={profile} />
+      <ProfileSettingsForm key={profile.updated_at} profile={profile} />
     </div>
   );
 }

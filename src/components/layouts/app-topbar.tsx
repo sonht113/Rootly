@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Bell, Flame, LogOut, PanelLeftOpen, Search, UserRound } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -49,10 +49,6 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
   const searchQuery = searchParams.get("q") ?? "";
   const searchConfig = getTopbarSearchConfig(pathname);
   const currentUnreadNotificationCount = notificationsUnreadState?.unreadCount ?? unreadNotificationCount;
-
-  useEffect(() => {
-    setMobileNavOpen(false);
-  }, [pathname]);
 
   function handleOpenProfile() {
     setMobileNavOpen(false);
@@ -197,7 +193,7 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
           </div>
 
           <div className="flex flex-1 flex-col gap-6">
-            <AppSidebarNav role={profile.role} />
+            <AppSidebarNav role={profile.role} onNavigate={() => setMobileNavOpen(false)} />
 
             <Button type="button" variant="ghost" className="h-11 justify-start rounded-[16px] px-3 text-slate-700" onClick={handleOpenProfile}>
               <UserRound className="size-4" />

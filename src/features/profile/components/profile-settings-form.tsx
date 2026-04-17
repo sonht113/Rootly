@@ -36,14 +36,6 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
     full_name: fullName,
   });
 
-  useEffect(() => {
-    setFullName(profile.full_name);
-  }, [profile.full_name]);
-
-  useEffect(() => {
-    setContactEmail(profile.email ?? "");
-  }, [profile.email]);
-
   const previewUrl = useMemo(() => {
     if (!selectedAvatar) {
       return profile.avatar_url;
