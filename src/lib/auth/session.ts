@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { getRoleHomePath } from "@/lib/navigation/role-routes";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { AppRole, ProfileRow } from "@/types/domain";
 
@@ -64,7 +65,7 @@ export async function requireRole(roles: AppRole[]) {
   }
 
   if (!roles.includes(profile.role)) {
-    redirect("/today");
+    redirect(getRoleHomePath(profile.role));
   }
 
   return profile;

@@ -5,7 +5,7 @@ import { getCurrentStreak } from "@/server/repositories/study-repository";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
-  const [profile, streak] = await Promise.all([requireRole(["teacher", "admin"]), getCurrentStreak()]);
+  const [profile, streak] = await Promise.all([requireRole(["teacher"]), getCurrentStreak()]);
 
   return (
     <AppShell profile={profile} streak={streak}>

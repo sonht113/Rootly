@@ -43,7 +43,7 @@ export function LoginForm() {
       }
 
       toast.success("Đăng nhập thành công");
-      router.push("/today");
+      router.push("/");
       router.refresh();
     });
   });

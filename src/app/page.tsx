@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getRoleHomePath } from "@/lib/navigation/role-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +12,5 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  redirect("/today");
+  redirect(getRoleHomePath(profile.role));
 }

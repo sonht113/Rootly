@@ -12,7 +12,7 @@ export default function NotFound() {
           Co the lien ket da thay doi, hoac noi dung nay chua duoc publish.
         </p>
         <Button asChild>
-          <Link href="/today">Quay ve dashboard</Link>
+          <Link href="/">Quay ve dashboard</Link>
         </Button>
       </div>
     </div>
