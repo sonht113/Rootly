@@ -1,10 +1,11 @@
 import { buildTodayDashboardViewModel } from "@/features/today-dashboard/lib/build-today-dashboard-view-model";
+import { getTodayDailyRootRecommendation } from "@/server/repositories/daily-root-recommendations-repository";
 import { getLeaderboard } from "@/server/repositories/ranking-repository";
 import { getRootWordDetail } from "@/server/repositories/root-words-repository";
 import { getDailyGoalSummary, getReviewQueue, getTodayDashboard } from "@/server/repositories/study-repository";
 
 export async function getStudentTodayDashboardViewModel() {
-  const [dashboard, dailyGoal, leaderboard, reviewQueue] = await Promise.all([
+  const [dashboard, dailyGoal, leaderboard, reviewQueue, todayRecommendation] = await Promise.all([
     getTodayDashboard(),
     getDailyGoalSummary(),
     getLeaderboard({
@@ -13,10 +14,17 @@ export async function getStudentTodayDashboardViewModel() {
       scope: "all",
     }),
     getReviewQueue(),
+    getTodayDailyRootRecommendation(),
   ]);
 
-  const featuredRootId = dashboard.todayPlans[0]?.root_word.id ?? dashboard.overduePlans[0]?.root_word.id ?? null;
-  const featuredRootSource = dashboard.todayPlans[0]
+  const featuredRootId =
+    todayRecommendation?.rootWordId ??
+    dashboard.todayPlans[0]?.root_word.id ??
+    dashboard.overduePlans[0]?.root_word.id ??
+    null;
+  const featuredRootSource = todayRecommendation
+    ? "admin-recommended"
+    : dashboard.todayPlans[0]
     ? "today"
     : dashboard.overduePlans[0]
       ? "overdue"

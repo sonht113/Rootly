@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, CheckCheck, ChevronRight, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/features/notifications/actions/notifications";
+import { useNotificationsUnreadState } from "@/features/notifications/components/notifications-unread-provider";
 import type { NotificationListItem } from "@/features/notifications/lib/notification-presenter";
+import { getRoleFromPathname, getRoleHomePath } from "@/lib/navigation/role-routes";
 import { cn } from "@/lib/utils/cn";
 
 interface NotificationsInboxProps {
@@ -19,10 +21,14 @@ interface NotificationsInboxProps {
 }
 
 export function NotificationsInbox({ items, unreadCount }: NotificationsInboxProps) {
+  const pathname = usePathname();
   const router = useRouter();
+  const notificationsUnreadState = useNotificationsUnreadState();
   const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
   const [isItemPending, startItemTransition] = useTransition();
   const [isMarkAllPending, startMarkAllTransition] = useTransition();
+  const currentUnreadCount = notificationsUnreadState?.unreadCount ?? unreadCount;
+  const emptyStateActionHref = getRoleHomePath(getRoleFromPathname(pathname));
 
   if (items.length === 0) {
     return (
@@ -30,7 +36,7 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
         title="Chưa có thông báo nào"
         description="Khi có gợi ý mới từ lớp hoặc các cập nhật quan trọng, chúng sẽ xuất hiện ở đây."
         actionLabel="Mở hôm nay"
-        actionHref="/today"
+        actionHref={emptyStateActionHref}
       />
     );
   }
@@ -59,6 +65,7 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
         return;
       }
 
+      notificationsUnreadState?.optimisticallyMarkNotificationRead(item.id);
       router.push(linkHref);
       router.refresh();
       setActiveNotificationId(null);
@@ -75,6 +82,7 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
       if (!result.success) {
         toast.error(result.message);
       } else {
+        notificationsUnreadState?.optimisticallyMarkNotificationRead(item.id);
         toast.success(result.message);
         router.refresh();
       }
@@ -92,6 +100,7 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
         return;
       }
 
+      notificationsUnreadState?.optimisticallyMarkAllNotificationsRead(result.updatedCount);
       toast.success(result.message);
       router.refresh();
     });
@@ -108,12 +117,19 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
             <div>
               <p className="text-sm font-semibold text-[#191c1e]">Tổng quan inbox</p>
               <p className="text-sm text-[color:var(--muted-foreground)]">
-                {unreadCount > 0 ? `Bạn còn ${unreadCount} thông báo chưa đọc.` : "Tất cả thông báo đã được xử lý."}
+                {currentUnreadCount > 0
+                  ? `Bạn còn ${currentUnreadCount} thông báo chưa đọc.`
+                  : "Tất cả thông báo đã được xử lý."}
               </p>
             </div>
           </div>
 
-          <Button type="button" variant="outline" disabled={unreadCount === 0 || isMarkAllPending} onClick={handleMarkAllAsRead}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={currentUnreadCount === 0 || isMarkAllPending}
+            onClick={handleMarkAllAsRead}
+          >
             {isMarkAllPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCheck className="size-4" />}
             Đánh dấu tất cả đã đọc
           </Button>

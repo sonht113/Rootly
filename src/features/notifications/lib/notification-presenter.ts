@@ -14,6 +14,7 @@ export interface NotificationListItem {
 const notificationTypeLabels: Record<NotificationType, string> = {
   class_member_added: "Tham gia lớp học",
   class_suggestion: "Gợi ý từ lớp",
+  daily_root_recommendation: "Root từ hôm nay",
 };
 
 const notificationDateFormatter = new Intl.DateTimeFormat("vi-VN", {

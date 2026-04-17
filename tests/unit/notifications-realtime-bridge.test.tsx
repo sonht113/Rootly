@@ -1,7 +1,11 @@
-import { render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NotificationsRealtimeBridge } from "@/features/notifications/components/notifications-realtime-bridge";
+import {
+  NotificationsUnreadProvider,
+  useNotificationsUnreadState,
+} from "@/features/notifications/components/notifications-unread-provider";
 import { getNotificationsRealtimeTopic } from "@/features/notifications/lib/notifications-realtime";
 import type { NotificationRow } from "@/types/domain";
 
@@ -26,6 +30,12 @@ vi.mock("sonner", () => ({
 vi.mock("@/lib/supabase/browser", () => ({
   createBrowserSupabaseClient: () => mockedCreateBrowserSupabaseClient(),
 }));
+
+function UnreadCountProbe() {
+  const notificationsUnreadState = useNotificationsUnreadState();
+
+  return <div>{`Unread: ${notificationsUnreadState?.unreadCount ?? 0}`}</div>;
+}
 
 describe("NotificationsRealtimeBridge", () => {
   const notificationRecord: NotificationRow = {
@@ -101,17 +111,19 @@ describe("NotificationsRealtimeBridge", () => {
       expect(channel.subscribe).toHaveBeenCalled();
     });
 
-    handlers["broadcast:INSERT"]({
-      type: "broadcast",
-      event: "INSERT",
-      payload: {
-        id: "broadcast-1",
-        schema: "public",
-        table: "notifications",
-        operation: "INSERT",
-        record: notificationRecord,
-        old_record: null,
-      },
+    await act(async () => {
+      handlers["broadcast:INSERT"]({
+        type: "broadcast",
+        event: "INSERT",
+        payload: {
+          id: "broadcast-1",
+          schema: "public",
+          table: "notifications",
+          operation: "INSERT",
+          record: notificationRecord,
+          old_record: null,
+        },
+      });
     });
 
     expect(mockedToast).toHaveBeenCalledWith(
@@ -139,7 +151,143 @@ describe("NotificationsRealtimeBridge", () => {
     });
   });
 
+  it("increments shared unread count when a new unread notification arrives", async () => {
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    const channel = {
+      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
+        handlers[`${type}:${filter.event}`] = callback;
+        return channel;
+      }),
+      subscribe: vi.fn(() => channel),
+    };
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "access-token-1",
+            },
+          },
+        }),
+        onAuthStateChange: vi.fn(() => ({
+          data: {
+            subscription: {
+              unsubscribe: vi.fn(),
+            },
+          },
+        })),
+      },
+      realtime: {
+        setAuth: vi.fn().mockResolvedValue(undefined),
+      },
+      channel: vi.fn(() => channel),
+      removeChannel: vi.fn().mockResolvedValue("ok"),
+    };
+
+    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+
+    render(
+      <NotificationsUnreadProvider initialUnreadCount={0}>
+        <UnreadCountProbe />
+        <NotificationsRealtimeBridge userId="auth-user-1" />
+      </NotificationsUnreadProvider>,
+    );
+
+    await waitFor(() => {
+      expect(channel.subscribe).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      handlers["broadcast:INSERT"]({
+        type: "broadcast",
+        event: "INSERT",
+        payload: {
+          id: "broadcast-4",
+          schema: "public",
+          table: "notifications",
+          operation: "INSERT",
+          record: notificationRecord,
+          old_record: null,
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Unread: 1")).toBeInTheDocument();
+    });
+  });
+
   it("refreshes unread state for updates without showing a new toast", async () => {
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    const channel = {
+      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
+        handlers[`${type}:${filter.event}`] = callback;
+        return channel;
+      }),
+      subscribe: vi.fn(() => channel),
+    };
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "access-token-1",
+            },
+          },
+        }),
+        onAuthStateChange: vi.fn(() => ({
+          data: {
+            subscription: {
+              unsubscribe: vi.fn(),
+            },
+          },
+        })),
+      },
+      realtime: {
+        setAuth: vi.fn().mockResolvedValue(undefined),
+      },
+      channel: vi.fn(() => channel),
+      removeChannel: vi.fn().mockResolvedValue("ok"),
+    };
+
+    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+
+    render(
+      <NotificationsUnreadProvider initialUnreadCount={1}>
+        <UnreadCountProbe />
+        <NotificationsRealtimeBridge userId="auth-user-1" />
+      </NotificationsUnreadProvider>,
+    );
+
+    await waitFor(() => {
+      expect(channel.subscribe).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      handlers["broadcast:UPDATE"]({
+        type: "broadcast",
+        event: "UPDATE",
+        payload: {
+          id: "broadcast-2",
+          schema: "public",
+          table: "notifications",
+          operation: "UPDATE",
+          record: {
+            ...notificationRecord,
+            is_read: true,
+            read_at: "2026-04-14T09:05:00.000Z",
+          },
+          old_record: notificationRecord,
+        },
+      });
+    });
+
+    expect(mockedToast).not.toHaveBeenCalled();
+
+    expect(screen.getByText("Unread: 0")).toBeInTheDocument();
+  });
+
+  it("shows a toast for updated unread notifications when the content changes", async () => {
     const handlers: Record<string, (payload: unknown) => void> = {};
     const channel = {
       on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
@@ -180,24 +328,39 @@ describe("NotificationsRealtimeBridge", () => {
       expect(channel.subscribe).toHaveBeenCalled();
     });
 
-    handlers["broadcast:UPDATE"]({
-      type: "broadcast",
-      event: "UPDATE",
-      payload: {
-        id: "broadcast-2",
-        schema: "public",
-        table: "notifications",
-        operation: "UPDATE",
-        record: {
-          ...notificationRecord,
-          is_read: true,
-          read_at: "2026-04-14T09:05:00.000Z",
+    await act(async () => {
+      handlers["broadcast:UPDATE"]({
+        type: "broadcast",
+        event: "UPDATE",
+        payload: {
+          id: "broadcast-3",
+          schema: "public",
+          table: "notifications",
+          operation: "UPDATE",
+          record: {
+            ...notificationRecord,
+            type: "daily_root_recommendation",
+            title: "Có root từ đề xuất mới cho hôm nay: cred",
+            message: 'Hệ thống vừa đề xuất root từ "cred" cho ngày 18/04/2026.',
+            source_key: "daily_root_recommendation:2026-04-18:auth-user-1",
+          },
+          old_record: {
+            ...notificationRecord,
+            type: "daily_root_recommendation",
+            title: "Có root từ đề xuất mới cho hôm nay: dict",
+            message: 'Hệ thống vừa đề xuất root từ "dict" cho ngày 18/04/2026.',
+            source_key: "daily_root_recommendation:2026-04-18:auth-user-1",
+          },
         },
-        old_record: notificationRecord,
-      },
+      });
     });
 
-    expect(mockedToast).not.toHaveBeenCalled();
+    expect(mockedToast).toHaveBeenCalledWith(
+      "Có root từ đề xuất mới cho hôm nay: cred",
+      expect.objectContaining({
+        description: 'Hệ thống vừa đề xuất root từ "cred" cho ngày 18/04/2026.',
+      }),
+    );
 
     await waitFor(() => {
       expect(mockedRefresh).toHaveBeenCalledTimes(1);

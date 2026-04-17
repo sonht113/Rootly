@@ -2,7 +2,11 @@ import { formatDistanceStrict, isSameDay, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 
 import { getProfileDisplayName } from "@/lib/utils/profile";
-import type { BuildTodayDashboardViewModelInput, ReviewHighlightItem, TodayDashboardViewModel } from "@/features/today-dashboard/types";
+import type {
+  BuildTodayDashboardViewModelInput,
+  ReviewHighlightItem,
+  TodayDashboardViewModel,
+} from "@/features/today-dashboard/types";
 
 function getGreetingPrefix(now: Date) {
   const hour = now.getHours();
@@ -78,6 +82,33 @@ function buildReviewHighlightItems(input: BuildTodayDashboardViewModelInput, now
   });
 }
 
+function buildLearningCardSupportText(input: BuildTodayDashboardViewModelInput) {
+  const featuredRoot = input.featuredRootDetail;
+
+  if (!featuredRoot) {
+    return "";
+  }
+
+  return (
+    extractFirstSentence(featuredRoot.description) ||
+    (input.featuredRootSource === "admin-recommended"
+      ? `Admin đang đề xuất bạn khám phá root này hôm nay. Nghĩa: ${featuredRoot.meaning}`
+      : `Nghĩa: ${featuredRoot.meaning}`)
+  );
+}
+
+function buildLearningCardBadgeLabel(source: BuildTodayDashboardViewModelInput["featuredRootSource"]) {
+  if (source === "admin-recommended") {
+    return "ĐỀ XUẤT HÔM NAY";
+  }
+
+  if (source === "overdue") {
+    return "ƯU TIÊN QUÁ HẠN";
+  }
+
+  return "TỪ GỐC CỦA NGÀY";
+}
+
 export function buildTodayDashboardViewModel(input: BuildTodayDashboardViewModelInput): TodayDashboardViewModel {
   const now = input.now ?? new Date();
   const displayName = getProfileDisplayName(input.dashboard.greetingName);
@@ -120,9 +151,9 @@ export function buildTodayDashboardViewModel(input: BuildTodayDashboardViewModel
         }
       : {
           variant: "root",
-          badgeLabel: input.featuredRootSource === "overdue" ? "ƯU TIÊN QUÁ HẠN" : "TỪ GỐC CỦA NGÀY",
+          badgeLabel: buildLearningCardBadgeLabel(input.featuredRootSource),
           title: featuredRoot.root.toLowerCase(),
-          supportText: extractFirstSentence(featuredRoot.description) || `Nghĩa: ${featuredRoot.meaning}`,
+          supportText: buildLearningCardSupportText(input),
           ctaLabel: input.featuredRootSource === "overdue" ? "Tiếp tục học" : "Bắt đầu học",
           ctaHref: `/library/${featuredRoot.id}`,
           source: input.featuredRootSource,
