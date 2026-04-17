@@ -7,6 +7,8 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { ClassExamsPanel } from "@/features/classes/components/class-exams-panel";
 import { ClassMembersPanel, ClassSuggestionsPanel } from "@/features/classes/components/class-detail-panels";
 import { RankingRow } from "@/features/ranking/components/ranking-row";
+import { getCurrentProfile } from "@/lib/auth/session";
+import { getRoleExamDetailPath, getRoleExamsPath } from "@/lib/navigation/role-routes";
 import { getClassDetail } from "@/server/repositories/classes-repository";
 import { getManageableExams } from "@/server/repositories/exams-repository";
 import { getLeaderboard } from "@/server/repositories/ranking-repository";
@@ -18,7 +20,7 @@ export default async function TeacherClassDetailPage({
   params: Promise<{ classId: string }>;
 }) {
   const { classId } = await params;
-  const [{ classData, summary }, rootWords, leaderboard, exams] = await Promise.all([
+  const [{ classData, summary }, rootWords, leaderboard, exams, profile] = await Promise.all([
     getClassDetail(classId),
     getPublishedRootWords(),
     getLeaderboard({
@@ -28,8 +30,10 @@ export default async function TeacherClassDetailPage({
       classId,
     }),
     getManageableExams(),
+    getCurrentProfile(),
   ]);
   const classExams = exams.filter((exam) => exam.class_id === classId);
+  const examRouteRole = profile?.role ?? "teacher";
 
   return (
     <div className="space-y-6">
@@ -40,7 +44,7 @@ export default async function TeacherClassDetailPage({
         badgeText={`${summary.memberCount} thành viên`}
         action={
           <Button asChild variant="outline">
-            <Link href={`/teacher/exams?classId=${classId}`}>Tạo kỳ thi cho lớp</Link>
+            <Link href={`${getRoleExamsPath(examRouteRole)}?classId=${classId}`}>Tạo kỳ thi cho lớp</Link>
           </Button>
         }
       />
@@ -94,7 +98,7 @@ export default async function TeacherClassDetailPage({
         emptyMessage="Chưa có kỳ thi nào được gắn với lớp này."
         audience="teacher"
         exams={classExams}
-        hrefBuilder={(examId) => `/teacher/exams/${examId}`}
+        hrefBuilder={(examId) => getRoleExamDetailPath(examRouteRole, examId)}
       />
 
       <Card>

@@ -5,10 +5,13 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateClassForm } from "@/features/classes/components/class-manager";
+import { getCurrentProfile } from "@/lib/auth/session";
+import { getRoleClassDetailPath } from "@/lib/navigation/role-routes";
 import { getTeacherClasses } from "@/server/repositories/classes-repository";
 
 export default async function TeacherClassesPage() {
-  const classes = await getTeacherClasses();
+  const [classes, profile] = await Promise.all([getTeacherClasses(), getCurrentProfile()]);
+  const classDetailRole = profile?.role ?? "teacher";
 
   return (
     <div className="space-y-6">
@@ -34,7 +37,7 @@ export default async function TeacherClassesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Link href={`/teacher/classes/${classItem.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--primary-strong)]">
+              <Link href={getRoleClassDetailPath(classDetailRole, classItem.id)} className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--primary-strong)]">
                 Xem chi tiết lớp
                 <ArrowUpRight className="size-4" />
               </Link>
@@ -45,4 +48,3 @@ export default async function TeacherClassesPage() {
     </div>
   );
 }
-

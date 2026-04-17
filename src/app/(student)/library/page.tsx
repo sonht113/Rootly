@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LibraryRootCard } from "@/features/root-words/components/library-root-card";
 import { LibrarySpotlightCard } from "@/features/root-words/components/library-spotlight-card";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/session";
+import { getRoleLibraryPath } from "@/lib/navigation/role-routes";
 import { cn } from "@/lib/utils/cn";
 import {
   getPaginatedLibraryRootWords,
@@ -52,10 +53,12 @@ function parsePageValue(rawPage?: string) {
 }
 
 function buildLibraryHref({
+  basePath,
   query,
   level,
   page,
 }: {
+  basePath: string;
   query: string;
   level: string;
   page: number;
@@ -75,7 +78,7 @@ function buildLibraryHref({
   }
 
   const nextQuery = params.toString();
-  return nextQuery ? `/library?${nextQuery}` : "/library";
+  return nextQuery ? `${basePath}?${nextQuery}` : basePath;
 }
 
 export default async function LibraryPage({
@@ -92,10 +95,8 @@ export default async function LibraryPage({
     ? normalizedLevel
     : "";
   const requestedPage = parsePageValue(params.page);
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentProfile();
+  const libraryPath = getRoleLibraryPath(profile?.role ?? "student");
   const {
     items: rootWords,
     totalCount,
@@ -105,19 +106,21 @@ export default async function LibraryPage({
   } = await getPaginatedLibraryRootWords({
     query: query || undefined,
     level: activeLevel || undefined,
-    userId: user?.id ?? null,
+    userId: profile?.auth_user_id ?? null,
     page: requestedPage,
     pageSize: LIBRARY_PAGE_SIZE,
   });
 
   const buildFilterHref = (nextLevel: string) =>
     buildLibraryHref({
+      basePath: libraryPath,
       query,
       level: nextLevel,
       page: 1,
     });
   const buildPageHref = (nextPage: number) =>
     buildLibraryHref({
+      basePath: libraryPath,
       query,
       level: activeLevel,
       page: nextPage,
@@ -203,7 +206,7 @@ export default async function LibraryPage({
         <div className="space-y-6">
           <section className="grid gap-6 xl:grid-cols-3">
             {bentoRootWords.map((rootWord) => (
-              <LibraryRootCard key={rootWord.id} rootWord={rootWord} />
+              <LibraryRootCard key={rootWord.id} rootWord={rootWord} hrefBase={libraryPath} />
             ))}
             {featuredRootWord ? (
               <LibrarySpotlightCard rootWord={featuredRootWord} />
@@ -213,7 +216,7 @@ export default async function LibraryPage({
           {remainingRootWords.length > 0 ? (
             <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {remainingRootWords.map((rootWord) => (
-                <LibraryRootCard key={rootWord.id} rootWord={rootWord} />
+                <LibraryRootCard key={rootWord.id} rootWord={rootWord} hrefBase={libraryPath} />
               ))}
             </section>
           ) : null}

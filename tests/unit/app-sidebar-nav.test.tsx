@@ -23,7 +23,7 @@ describe("AppSidebarNav", () => {
     mockedUsePathname.mockReset();
   });
 
-  it("marks only Today active on /today", () => {
+  it("marks only Today active on /today for students", () => {
     mockedUsePathname.mockReturnValue("/today");
 
     render(<AppSidebarNav role="student" />);
@@ -41,17 +41,16 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
   });
 
-  it("shows notifications for students and marks it active on nested notification routes", () => {
+  it("shows notifications for students and marks nested notification routes active", () => {
     mockedUsePathname.mockReturnValue("/notifications/history");
 
     render(<AppSidebarNav role="student" />);
 
     expect(screen.getByRole("link", { name: "Thông báo" })).toHaveAttribute("href", "/notifications");
     expect(screen.getByRole("link", { name: "Thông báo" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
   });
 
-  it("shows the classes item for students and marks it active on nested class routes", () => {
+  it("shows the classes item for students and marks nested class routes active", () => {
     mockedUsePathname.mockReturnValue("/classes/class-1");
 
     render(<AppSidebarNav role="student" />);
@@ -60,7 +59,7 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Lớp học" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("shows the exams item for students and marks it active on nested exam routes", () => {
+  it("shows the exams item for students and marks nested exam routes active", () => {
     mockedUsePathname.mockReturnValue("/exams/123");
 
     render(<AppSidebarNav role="student" />);
@@ -74,21 +73,16 @@ describe("AppSidebarNav", () => {
 
     render(<AppSidebarNav role="student" />);
 
-    const hrefs = screen
-      .getAllByRole("link")
-      .map((link) => link.getAttribute("href"))
-      .filter((href): href is string => Boolean(href));
-
-    expect(hrefs).not.toContain("/roots");
     expect(screen.queryByRole("link", { name: "Gốc từ" })).not.toBeInTheDocument();
   });
 
-  it("keeps the roots item visible for teachers", () => {
-    mockedUsePathname.mockReturnValue("/today");
+  it("keeps the roots item visible for teachers with teacher namespace", () => {
+    mockedUsePathname.mockReturnValue("/teacher/classes");
 
     render(<AppSidebarNav role="teacher" />);
 
-    expect(screen.getByRole("link", { name: "Gốc từ" })).toHaveAttribute("href", "/roots");
+    expect(screen.getByRole("link", { name: "Gốc từ" })).toHaveAttribute("href", "/teacher/roots");
+    expect(screen.queryByRole("link", { name: "Hôm nay" })).not.toBeInTheDocument();
   });
 
   it("shows teacher exams and keeps the parent item active for nested teacher exam routes", () => {
@@ -100,13 +94,13 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Kỳ thi" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("keeps the parent item active for nested teacher routes", () => {
+  it("keeps the classes item active for nested teacher routes", () => {
     mockedUsePathname.mockReturnValue("/teacher/classes/123");
 
     render(<AppSidebarNav role="teacher" />);
 
     expect(screen.getByRole("link", { name: "Lớp học" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Kỳ thi" })).not.toHaveAttribute("aria-current");
   });
 
   it("keeps the parent item active for nested admin routes", () => {
@@ -115,7 +109,7 @@ describe("AppSidebarNav", () => {
     render(<AppSidebarNav role="admin" />);
 
     expect(screen.getByRole("link", { name: "Nội dung" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Hôm nay" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Nội dung" })).toHaveAttribute("href", "/admin/root-words");
   });
 
   it("updates the active item when the pathname changes", () => {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LibraryRootCard } from "@/features/root-words/components/library-root-card";
 import { getCurrentProfile } from "@/lib/auth/session";
+import { getAdminRootWordsPath, getRoleRootsPath } from "@/lib/navigation/role-routes";
 import { cn } from "@/lib/utils/cn";
 import { getLibraryRootWords } from "@/server/repositories/root-words-repository";
 
@@ -26,6 +27,7 @@ export default async function RootsPage({
   const normalizedLevel = (params.level ?? "").toLowerCase();
   const activeLevel = levelFilters.some((filter) => filter.value === normalizedLevel) ? normalizedLevel : "";
   const profile = await getCurrentProfile();
+  const rootsPath = getRoleRootsPath(profile?.role ?? "student");
 
   const rootWords = await getLibraryRootWords({
     query: query || undefined,
@@ -45,7 +47,7 @@ export default async function RootsPage({
     }
 
     const nextQuery = nextParams.toString();
-    return nextQuery ? `/roots?${nextQuery}` : "/roots";
+    return nextQuery ? `${rootsPath}?${nextQuery}` : rootsPath;
   };
 
   return (
@@ -68,7 +70,7 @@ export default async function RootsPage({
         <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
           {profile?.role === "admin" ? (
             <Button asChild className="h-11 rounded-[12px] bg-[#0058be] px-5 text-sm font-semibold text-white hover:bg-[#004ca6]">
-              <Link href="/admin/root-words">
+              <Link href={getAdminRootWordsPath()}>
                 Quản lý & import nội dung
                 <ArrowUpRight className="size-4" />
               </Link>
@@ -120,7 +122,7 @@ export default async function RootsPage({
       ) : (
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {rootWords.map((rootWord) => (
-            <LibraryRootCard key={rootWord.id} rootWord={rootWord} hrefBase="/roots" ctaLabel="Mở hồ sơ" />
+            <LibraryRootCard key={rootWord.id} rootWord={rootWord} hrefBase={rootsPath} ctaLabel="Mở hồ sơ" />
           ))}
         </section>
       )}

@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useNotificationsUnreadState } from "@/features/notifications/components/notifications-unread-provider";
+import { getRoleNotificationsPath, getRoleProfilePath } from "@/lib/navigation/role-routes";
 import { getTopbarSearchConfig } from "@/lib/navigation/topbar-search";
 import { cn } from "@/lib/utils/cn";
 import { getProfileDisplay } from "@/lib/utils/profile";
@@ -41,10 +43,12 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const notificationsUnreadState = useNotificationsUnreadState();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { displayName, initials, roleLabel } = getProfileDisplay(profile);
   const searchQuery = searchParams.get("q") ?? "";
   const searchConfig = getTopbarSearchConfig(pathname);
+  const currentUnreadNotificationCount = notificationsUnreadState?.unreadCount ?? unreadNotificationCount;
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -52,7 +56,7 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
 
   function handleOpenProfile() {
     setMobileNavOpen(false);
-    router.push("/profile");
+    router.push(getRoleProfilePath(profile.role));
   }
 
   async function handleLogout() {
@@ -105,31 +109,31 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
             </div>
 
             <Button asChild variant="ghost" size="icon" className="relative size-9 rounded-full text-slate-500 hover:bg-slate-100">
-              <Link
-                href="/notifications"
-                aria-label={
-                  unreadNotificationCount > 0
-                    ? `Mở thông báo, ${unreadNotificationCount} chưa đọc`
-                    : "Mở thông báo"
-                }
-                title={
-                  unreadNotificationCount > 0
-                    ? `${unreadNotificationCount} thông báo chưa đọc`
-                    : "Mở trung tâm thông báo"
-                }
-                onClick={() => setMobileNavOpen(false)}
-              >
-                <Bell className="size-4" />
-                {unreadNotificationCount > 0 ? (
-                  <span
-                    className={cn(
-                      "absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ba1a1a] px-1 text-[10px] font-bold leading-4 text-white",
-                    )}
-                  >
-                    {formatUnreadBadgeCount(unreadNotificationCount)}
-                  </span>
-                ) : null}
-              </Link>
+                <Link
+                  href={getRoleNotificationsPath(profile.role)}
+                  aria-label={
+                    currentUnreadNotificationCount > 0
+                      ? `Mở thông báo, ${currentUnreadNotificationCount} chưa đọc`
+                      : "Mở thông báo"
+                  }
+                  title={
+                    currentUnreadNotificationCount > 0
+                      ? `${currentUnreadNotificationCount} thông báo chưa đọc`
+                      : "Mở trung tâm thông báo"
+                  }
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  <Bell className="size-4" />
+                  {currentUnreadNotificationCount > 0 ? (
+                    <span
+                      className={cn(
+                        "absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ba1a1a] px-1 text-[10px] font-bold leading-4 text-white",
+                      )}
+                    >
+                      {formatUnreadBadgeCount(currentUnreadNotificationCount)}
+                    </span>
+                  ) : null}
+                </Link>
             </Button>
 
             <DropdownMenu>
