@@ -42,7 +42,10 @@ export function UploadDropzone({
         type="file"
         accept={accept}
         className="hidden"
-        onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
+        onChange={(event) => {
+          onSelect(event.target.files?.[0] ?? null);
+          event.currentTarget.value = "";
+        }}
       />
       <Button type="button" variant="outline" className="mt-4" onClick={() => inputRef.current?.click()}>
         Chọn tệp

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+import { fullNameSchema } from "@/lib/validations/profile-name";
+
 export const registerSchema = z.object({
+  fullName: fullNameSchema,
   username: z
     .string()
     .min(3, "Tên đăng nhập cần ít nhất 3 ký tự")

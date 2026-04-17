@@ -16,6 +16,7 @@ interface ClassMemberPanelProps {
   members: Array<{
     id: string;
     profile: {
+      full_name: string;
       username: string;
       role: string;
     };
@@ -50,22 +51,22 @@ export function ClassMembersPanel({ classId, members }: ClassMemberPanelProps) {
         <div className="space-y-3">
           {members.length === 0 ? (
             <div className="rounded-[14px] border border-dashed border-[color:var(--border)] bg-[color:var(--muted)]/50 p-4 text-sm text-[color:var(--muted-foreground)]">
-              Lớp hiện chưa có thành viên nào. Hãy tìm và chọn học viên theo username để bắt đầu theo dõi tiến độ.
+              Lớp hiện chưa có thành viên nào. Hãy tìm và chọn học viên theo Họ và Tên để bắt đầu theo dõi tiến độ.
             </div>
           ) : (
             members.map((member) => (
               <div key={member.id} className="flex items-center justify-between gap-3 rounded-[14px] bg-[color:var(--muted)] p-3">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{member.profile.username}</p>
+                  <p className="truncate font-medium">{member.profile.full_name}</p>
                   <p className="text-xs text-[color:var(--muted-foreground)]">
-                    {member.profile.role === "teacher" ? "Giáo viên" : "Học viên"}
+                    @{member.profile.username} · {member.profile.role === "teacher" ? "Giáo viên" : "Học viên"}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{member.profile.role === "teacher" ? "Giáo viên" : "Học viên"}</Badge>
                   {member.profile.role !== "teacher" ? (
-                    <RemoveMemberButton classId={classId} memberId={member.id} username={member.profile.username} />
+                    <RemoveMemberButton classId={classId} memberId={member.id} memberName={member.profile.full_name} />
                   ) : null}
                 </div>
               </div>

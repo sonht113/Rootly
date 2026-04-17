@@ -18,7 +18,7 @@ export type QuizQuestionType = "multiple_choice" | "text";
 export type ExamScope = "class" | "global";
 export type ExamStatus = "draft" | "published" | "closed";
 export type ExamAttemptStatus = "started" | "submitted" | "expired";
-export type NotificationType = "class_suggestion" | "class_member_added";
+export type NotificationType = "class_suggestion" | "class_member_added" | "daily_root_recommendation";
 export type NotificationMetadata = Record<string, string | number | boolean | null>;
 
 export interface RankingActivityPoint {
@@ -48,6 +48,7 @@ export interface ProfileRow {
   id: string;
   auth_user_id: string;
   username: string;
+  full_name: string;
   email: string | null;
   avatar_url: string | null;
   role: AppRole;
@@ -64,6 +65,15 @@ export interface RootWordRow {
   tags: string[];
   is_published: boolean;
   created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyRootRecommendationRow {
+  id: string;
+  recommendation_date: string;
+  root_word_id: string;
+  selected_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -335,6 +345,7 @@ export interface ExamLeaderboardRow {
   rank: number;
   user_id: string;
   username: string;
+  full_name: string;
   avatar_url: string | null;
   role: AppRole;
   score: number;
@@ -366,6 +377,7 @@ export interface RankingRow {
   rank: number;
   user_id: string;
   username: string;
+  full_name: string;
   avatar_url: string | null;
   role: AppRole;
   metric_value: number;

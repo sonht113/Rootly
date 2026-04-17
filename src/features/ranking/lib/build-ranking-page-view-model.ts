@@ -6,6 +6,7 @@ import {
   getRankingStatusLabel,
   getRankingStatusTier,
 } from "@/lib/utils/ranking";
+import { getProfileDisplayName } from "@/lib/utils/profile";
 import type { RankingPageViewModel, RankingLeaderboardEntry } from "@/features/ranking/types";
 import type { RankingInsightData, RankingMetric, RankingPeriod, RankingRow, RankingScope } from "@/types/domain";
 
@@ -29,6 +30,7 @@ export function buildRankingPageViewModel({
   const podium = leaderboard.slice(0, 3).map((row) => ({
     userId: row.user_id,
     rank: row.rank,
+    displayName: getProfileDisplayName(row.full_name, row.username),
     username: row.username,
     avatarUrl: row.avatar_url,
     valueLabel: formatRankingMetricValue(metric, row.metric_value),
@@ -41,6 +43,7 @@ export function buildRankingPageViewModel({
       userId: row.user_id,
       rank: row.rank,
       rankLabel: formatRankingNumber(row.rank).padStart(2, "0"),
+      displayName: getProfileDisplayName(row.full_name, row.username),
       username: row.username,
       avatarUrl: row.avatar_url,
       statusTier,

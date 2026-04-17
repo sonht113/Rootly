@@ -8,6 +8,7 @@ const leaderboardFixture: ExamLeaderboardRow[] = [
     rank: 1,
     user_id: "user-1",
     username: "alice",
+    full_name: "Alice Nguyen",
     avatar_url: null,
     role: "student",
     score: 96,
@@ -23,6 +24,7 @@ const leaderboardFixture: ExamLeaderboardRow[] = [
     rank: 2,
     user_id: "user-2",
     username: "bruno",
+    full_name: "Bruno Pham",
     avatar_url: null,
     role: "student",
     score: 92,
@@ -38,6 +40,7 @@ const leaderboardFixture: ExamLeaderboardRow[] = [
     rank: 3,
     user_id: "user-3",
     username: "cami",
+    full_name: "Cami Tran",
     avatar_url: null,
     role: "student",
     score: 88,
@@ -53,6 +56,7 @@ const leaderboardFixture: ExamLeaderboardRow[] = [
     rank: 4,
     user_id: "user-4",
     username: "dara",
+    full_name: "Dara Le",
     avatar_url: null,
     role: "student",
     score: 80,
@@ -72,6 +76,7 @@ describe("buildExamRankingViewModel", () => {
 
     expect(viewModel.podium).toHaveLength(3);
     expect(viewModel.allEntries).toHaveLength(1);
+    expect(viewModel.allEntries[0]?.displayName).toBe("Dara Le");
     expect(viewModel.allEntries[0]?.statusLabel).toBe("20/25 đúng · 12:30");
     expect(viewModel.allEntries[0]?.isCurrentUser).toBe(true);
   });

@@ -1,22 +1,17 @@
 import { randomUUID } from "node:crypto";
 
-import { getServerEnv } from "@/lib/supabase/env";
-import {
-  PROFILE_AVATAR_ACCEPTED_TYPES,
-  PROFILE_AVATAR_MAX_BYTES,
-} from "@/lib/validations/profile";
-import { getFileExtension, extractPublicStorageObjectPath } from "@/lib/utils/public-storage";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getServerEnv } from "@/lib/supabase/env";
+import { getFileExtension, extractPublicStorageObjectPath } from "@/lib/utils/public-storage";
+import { getProfileAvatarValidationError } from "@/lib/validations/profile";
 import { getCurrentProfileForSettings, updateCurrentProfileRecord } from "@/server/repositories/profile-repository";
 import type { ProfileRow } from "@/types/domain";
 
 function validateAvatarFile(file: File) {
-  if (!PROFILE_AVATAR_ACCEPTED_TYPES.includes(file.type as (typeof PROFILE_AVATAR_ACCEPTED_TYPES)[number])) {
-    throw new Error("Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WebP.");
-  }
+  const validationError = getProfileAvatarValidationError(file);
 
-  if (file.size > PROFILE_AVATAR_MAX_BYTES) {
-    throw new Error("Ảnh đại diện tối đa 2 MB.");
+  if (validationError) {
+    throw new Error(validationError);
   }
 }
 
@@ -90,6 +85,7 @@ async function removeAvatarByObjectPath(objectPath: string) {
 }
 
 export async function updateCurrentProfileSettings(input: {
+  fullName: string;
   contactEmail: string | null;
   avatarFile?: File | null;
 }) {
@@ -104,6 +100,7 @@ export async function updateCurrentProfileSettings(input: {
     }
 
     const updatedProfile = await updateCurrentProfileRecord({
+      full_name: input.fullName,
       email: input.contactEmail,
       avatar_url: nextAvatarUrl,
     });

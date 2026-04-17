@@ -42,7 +42,7 @@ export async function getCurrentProfileForSettings() {
 }
 
 export async function updateCurrentProfileRecord(
-  values: Partial<Pick<ProfileRow, "email" | "avatar_url">>,
+  values: Partial<Pick<ProfileRow, "full_name" | "email" | "avatar_url">>,
 ) {
   const { supabase, user } = await getAuthenticatedProfileContext();
   const { data, error } = await supabase

@@ -1,6 +1,6 @@
-import { normalizeUsername } from "@/lib/auth/username";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { normalizeProfileSearchText } from "@/lib/utils/profile";
 import type { RootLevel, UserRootPlanSource } from "@/types/domain";
 
 import { runSupabaseReadQueryWithRetry, unwrapSupabaseError } from "@/server/repositories/shared";
@@ -26,6 +26,7 @@ export interface CurrentUserClassSuggestion {
 
 export interface ClassMemberCandidate {
   userId: string;
+  fullName: string;
   username: string;
 }
 
@@ -160,7 +161,7 @@ export async function getClassDetail(classId: string) {
 export async function searchClassMemberCandidates(classId: string, query: string): Promise<ClassMemberCandidate[]> {
   await assertClassManagementAccess(classId);
 
-  const normalizedQuery = normalizeUsername(query);
+  const normalizedQuery = normalizeProfileSearchText(query);
 
   if (normalizedQuery.length < 2) {
     return [];
@@ -171,10 +172,10 @@ export async function searchClassMemberCandidates(classId: string, query: string
     supabaseAdmin.from("class_members").select("user_id").eq("class_id", classId),
     supabaseAdmin
       .from("profiles")
-      .select("auth_user_id, username")
+      .select("auth_user_id, full_name, username")
       .eq("role", "student")
-      .ilike("username", `${normalizedQuery}%`)
-      .order("username")
+      .ilike("full_name_search", `%${normalizedQuery}%`)
+      .order("full_name")
       .limit(25),
   ]);
 
@@ -188,11 +189,22 @@ export async function searchClassMemberCandidates(classId: string, query: string
 
   const existingMemberIds = new Set((existingMembers ?? []).map((member) => member.user_id));
 
-  return ((profiles ?? []) as Array<{ auth_user_id: string; username: string }>)
+  return ((profiles ?? []) as Array<{ auth_user_id: string; full_name: string; username: string }>)
     .filter((profile) => !existingMemberIds.has(profile.auth_user_id))
+    .sort((left, right) => {
+      const leftPrefix = normalizeProfileSearchText(left.full_name).startsWith(normalizedQuery) ? 0 : 1;
+      const rightPrefix = normalizeProfileSearchText(right.full_name).startsWith(normalizedQuery) ? 0 : 1;
+
+      if (leftPrefix !== rightPrefix) {
+        return leftPrefix - rightPrefix;
+      }
+
+      return left.full_name.localeCompare(right.full_name, "vi");
+    })
     .slice(0, 10)
     .map((profile) => ({
       userId: profile.auth_user_id,
+      fullName: profile.full_name,
       username: profile.username,
     }));
 }
@@ -203,7 +215,7 @@ export async function addClassMemberByUserId(classId: string, userId: string) {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("auth_user_id, username, role")
+    .select("auth_user_id, full_name, username, role")
     .eq("auth_user_id", userId)
     .maybeSingle();
 
@@ -227,7 +239,7 @@ export async function addClassMemberByUserId(classId: string, userId: string) {
   }
 
   if (existingMember) {
-    throw new Error(`Học viên ${profile.username} đã ở trong lớp này.`);
+    throw new Error(`Học viên ${profile.full_name} (@${profile.username}) đã ở trong lớp này.`);
   }
 
   const { error } = await supabase.from("class_members").insert({
@@ -242,6 +254,7 @@ export async function addClassMemberByUserId(classId: string, userId: string) {
 
   return {
     userId: profile.auth_user_id,
+    fullName: profile.full_name,
     username: profile.username,
   };
 }

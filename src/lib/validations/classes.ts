@@ -26,7 +26,7 @@ export const searchClassMemberCandidatesSchema = z.object({
     .string()
     .trim()
     .min(2, "Hãy nhập ít nhất 2 ký tự để tìm học viên")
-    .max(50, "Username tối đa 50 ký tự"),
+    .max(120, "Chuỗi tìm kiếm tối đa 120 ký tự"),
 });
 
 export const suggestRootSchema = z.object({
