@@ -63,6 +63,7 @@ function createInput(overrides: Partial<BuildTodayDashboardViewModelInput> = {})
         rank: 2,
         user_id: "user-1",
         username: "student.son_nguyen",
+        full_name: "Son Nguyen",
         avatar_url: null,
         role: "student",
         metric_value: 12,
@@ -76,6 +77,7 @@ function createInput(overrides: Partial<BuildTodayDashboardViewModelInput> = {})
         rank: 1,
         user_id: "user-2",
         username: "student.an",
+        full_name: "An",
         avatar_url: null,
         role: "student",
         metric_value: 14,
@@ -89,6 +91,7 @@ function createInput(overrides: Partial<BuildTodayDashboardViewModelInput> = {})
         rank: 3,
         user_id: "user-3",
         username: "student.binh",
+        full_name: "Binh",
         avatar_url: null,
         role: "student",
         metric_value: 10,
@@ -167,6 +170,25 @@ describe("buildTodayDashboardViewModel", () => {
     expect(viewModel.learningCard.source).toBe("today");
     expect(viewModel.learningCard.badgeLabel).toBe("TỪ GỐC CỦA NGÀY");
     expect(viewModel.learningCard.ctaHref).toBe("/library/root-1");
+  });
+
+  it("uses the admin recommendation before the personal plan root", () => {
+    const viewModel = buildTodayDashboardViewModel(
+      createInput({
+        featuredRootSource: "admin-recommended",
+        featuredRootDetail: {
+          ...createInput().featuredRootDetail!,
+          id: "root-admin",
+          root: "cred",
+          meaning: "to believe",
+        },
+      }),
+    );
+
+    expect(viewModel.learningCard.source).toBe("admin-recommended");
+    expect(viewModel.learningCard.badgeLabel).toBe("ĐỀ XUẤT HÔM NAY");
+    expect(viewModel.learningCard.ctaLabel).toBe("Bắt đầu học");
+    expect(viewModel.learningCard.ctaHref).toBe("/library/root-admin");
   });
 
   it("uses an overdue root fallback when no today plan exists", () => {

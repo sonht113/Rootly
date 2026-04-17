@@ -23,7 +23,7 @@ export default async function ProfilePage() {
       <PageHeader
         eyebrow="Hồ sơ"
         title={displayName}
-        description="Xem vai trò hiện tại, cập nhật email liên hệ và quản lý ảnh đại diện mà không làm lệch flow đăng nhập theo username."
+        description="Xem vai trò hiện tại, cập nhật Họ và Tên, email liên hệ và quản lý ảnh đại diện mà không làm lệch flow đăng nhập theo username."
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -58,7 +58,7 @@ export default async function ProfilePage() {
         </Card>
       </div>
 
-      <ProfileSettingsForm profile={profile} />
+      <ProfileSettingsForm key={profile.updated_at} profile={profile} />
     </div>
   );
 }

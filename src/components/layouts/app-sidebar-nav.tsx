@@ -8,10 +8,11 @@ import { cn } from "@/lib/utils/cn";
 import type { AppRole } from "@/types/domain";
 
 interface AppSidebarNavProps {
+  onNavigate?: () => void;
   role: AppRole;
 }
 
-export function AppSidebarNav({ role }: AppSidebarNavProps) {
+export function AppSidebarNav({ role, onNavigate }: AppSidebarNavProps) {
   const pathname = usePathname() ?? "";
   const navigation = navigationByRole[role];
 
@@ -33,6 +34,7 @@ export function AppSidebarNav({ role }: AppSidebarNavProps) {
                 ? "bg-[color:var(--primary-soft)] text-[color:var(--primary-strong)]"
                 : "text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]",
             )}
+            onClick={onNavigate}
           >
             <Icon className="size-4" />
             <span>{item.label}</span>

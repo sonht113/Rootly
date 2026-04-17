@@ -43,7 +43,7 @@ export interface TodayDashboardViewModel {
     supportText: string;
     ctaLabel: string;
     ctaHref: string;
-    source: "today" | "overdue" | "empty";
+    source: "admin-recommended" | "today" | "overdue" | "empty";
     words: Array<{
       order: number;
       word: string;
@@ -85,6 +85,6 @@ export interface BuildTodayDashboardViewModelInput {
     };
   }>;
   featuredRootDetail: RootWordDetail | null;
-  featuredRootSource: "today" | "overdue" | "empty";
+  featuredRootSource: "admin-recommended" | "today" | "overdue" | "empty";
   now?: Date;
 }

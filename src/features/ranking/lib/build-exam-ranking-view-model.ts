@@ -1,5 +1,6 @@
 import { formatRankingNumber } from "@/lib/utils/ranking";
 import { buildExamRankingInsights, formatExamDuration, getExamRankingStatusTier } from "@/lib/utils/exams";
+import { getProfileDisplayName } from "@/lib/utils/profile";
 import type { RankingLeaderboardEntry, RankingPodiumEntry } from "@/features/ranking/types";
 import type { ExamLeaderboardRow, ExamRankingInsightData } from "@/types/domain";
 
@@ -15,6 +16,7 @@ export function buildExamRankingViewModel(leaderboard: ExamLeaderboardRow[]): Ex
   const podium = leaderboard.slice(0, 3).map<RankingPodiumEntry>((row) => ({
     userId: row.user_id,
     rank: row.rank,
+    displayName: getProfileDisplayName(row.full_name, row.username),
     username: row.username,
     avatarUrl: row.avatar_url,
     valueLabel: `${row.score}%`,
@@ -24,6 +26,7 @@ export function buildExamRankingViewModel(leaderboard: ExamLeaderboardRow[]): Ex
     userId: row.user_id,
     rank: row.rank,
     rankLabel: formatRankingNumber(row.rank).padStart(2, "0"),
+    displayName: getProfileDisplayName(row.full_name, row.username),
     username: row.username,
     avatarUrl: row.avatar_url,
     statusTier: getExamRankingStatusTier(row.score),

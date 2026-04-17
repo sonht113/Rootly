@@ -64,12 +64,12 @@ export function RankingList({
 
                 <div className="flex items-center gap-3">
                   <Avatar className="size-10 border border-[#0058be1a] bg-[#eceef0]">
-                    {entry.avatarUrl ? <AvatarImage src={entry.avatarUrl} alt={entry.username} /> : null}
-                    <AvatarFallback>{getAvatarFallback(entry.username)}</AvatarFallback>
+                    {entry.avatarUrl ? <AvatarImage src={entry.avatarUrl} alt={entry.displayName} /> : null}
+                    <AvatarFallback>{getAvatarFallback(entry.displayName)}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
                     <p className={cn("truncate text-sm font-bold", entry.isCurrentUser ? "text-[#0058be]" : "text-[#191c1e]")}>
-                      {entry.isCurrentUser ? `${entry.username} (Bạn)` : entry.username}
+                      {entry.isCurrentUser ? `${entry.displayName} (Bạn)` : entry.displayName}
                     </p>
                   </div>
                 </div>

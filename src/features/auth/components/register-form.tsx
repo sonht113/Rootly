@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowRight,
+  AtSign,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -41,22 +42,29 @@ export function RegisterForm() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      fullName: "",
       username: "",
       email: "",
       password: "",
     },
   });
 
+  const watchedFullName = useWatch({
+    control: form.control,
+    name: "fullName",
+  });
   const watchedUsername = useWatch({
     control: form.control,
     name: "username",
   });
 
+  const normalizedFullName = watchedFullName?.trim() ?? "";
   const normalizedUsername = watchedUsername?.trim() ?? "";
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const formData = new FormData();
+      formData.set("fullName", values.fullName);
       formData.set("username", values.username);
       formData.set("email", values.email ?? "");
       formData.set("password", values.password);
@@ -81,7 +89,7 @@ export function RegisterForm() {
             <div className="relative inline-flex">
               <Avatar className="size-24 border-4 border-white bg-[#e6e8ea] shadow-[0_18px_40px_rgba(37,99,235,0.14)]">
                 <AvatarFallback className="bg-[#e6e8ea] text-3xl font-semibold text-[color:var(--foreground)]">
-                  {getAvatarFallback(normalizedUsername)}
+                  {getAvatarFallback(normalizedFullName || normalizedUsername)}
                 </AvatarFallback>
               </Avatar>
               <span
@@ -92,17 +100,36 @@ export function RegisterForm() {
               </span>
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--primary-strong)]">
-              Chọn ảnh đại diện
+              Tên hiển thị từ Họ và Tên
             </p>
           </div>
 
           <div className="space-y-4 pt-2">
             <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-sm font-semibold text-[#424754]">
+                Họ và Tên
+              </Label>
+              <div className="relative">
+                <UserRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#727785]" />
+                <Input
+                  id="fullName"
+                  autoComplete="name"
+                  className="h-[52px] rounded-[14px] border-transparent bg-[#f2f4f6] pl-12 pr-4 text-base shadow-none placeholder:text-[#727785]"
+                  placeholder="Nguyễn Văn An"
+                  {...form.register("fullName")}
+                />
+              </div>
+              {form.formState.errors.fullName ? (
+                <p className="text-sm text-[color:var(--danger)]">{form.formState.errors.fullName.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-semibold text-[#424754]">
                 Tên đăng nhập
               </Label>
               <div className="relative">
-                <UserRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#727785]" />
+                <AtSign className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#727785]" />
                 <Input
                   id="username"
                   autoComplete="username"

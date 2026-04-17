@@ -14,7 +14,7 @@ function toTitleCase(token: string) {
   return `${token.charAt(0).toUpperCase()}${token.slice(1).toLowerCase()}`;
 }
 
-export function getProfileDisplayName(username?: string | null) {
+function getDisplayNameFromUsername(username?: string | null) {
   const normalized = username?.trim() ?? "";
 
   if (!normalized) {
@@ -37,6 +37,26 @@ export function getProfileDisplayName(username?: string | null) {
   return tokens.map(toTitleCase).join(" ");
 }
 
+export function normalizeProfileSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[%_]/g, " ")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function getProfileDisplayName(fullName?: string | null, username?: string | null) {
+  const normalizedFullName = fullName?.trim().replace(/\s+/g, " ") ?? "";
+
+  if (normalizedFullName) {
+    return normalizedFullName;
+  }
+
+  return getDisplayNameFromUsername(username);
+}
+
 export function getProfileRoleLabel(role: AppRole) {
   return ROLE_LABELS[role];
 }
@@ -56,11 +76,11 @@ export function getProfileInitials(displayName: string) {
     return tokens[0].slice(0, 2).toUpperCase();
   }
 
-  return `${tokens[0].charAt(0)}${tokens[1].charAt(0)}`.toUpperCase();
+  return `${tokens[0].charAt(0)}${tokens[tokens.length - 1].charAt(0)}`.toUpperCase();
 }
 
-export function getProfileDisplay(profile: Pick<ProfileRow, "username" | "role">) {
-  const displayName = getProfileDisplayName(profile.username);
+export function getProfileDisplay(profile: Pick<ProfileRow, "full_name" | "username" | "role">) {
+  const displayName = getProfileDisplayName(profile.full_name, profile.username);
 
   return {
     displayName,

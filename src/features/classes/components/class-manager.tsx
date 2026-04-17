@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, PlusCircle, Search, Trash2, UserPlus } from "lucide-react";
@@ -30,10 +30,10 @@ import {
   searchClassMemberCandidatesAction,
   suggestRootAction,
 } from "@/features/classes/actions/classes";
-import type { ClassMemberCandidate } from "@/server/repositories/classes-repository";
-import { normalizeUsername } from "@/lib/auth/username";
 import { createClassSchema, suggestRootSchema } from "@/lib/validations/classes";
 import { cn } from "@/lib/utils/cn";
+import { normalizeProfileSearchText } from "@/lib/utils/profile";
+import type { ClassMemberCandidate } from "@/server/repositories/classes-repository";
 
 type CreateClassFormValues = z.input<typeof createClassSchema>;
 type SuggestRootFormValues = z.input<typeof suggestRootSchema>;
@@ -101,19 +101,11 @@ export function AddMemberForm({ classId }: { classId: string }) {
   const latestSearchRequestRef = useRef(0);
 
   useEffect(() => {
-    const normalizedQuery = normalizeUsername(query);
+    const normalizedQuery = normalizeProfileSearchText(query);
     latestSearchRequestRef.current += 1;
     const requestId = latestSearchRequestRef.current;
 
-    if (normalizedQuery.length === 0) {
-      setCandidates([]);
-      setSearchMessage(null);
-      return;
-    }
-
-    if (normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
-      setCandidates([]);
-      setSearchMessage(`Hãy nhập ít nhất ${MIN_MEMBER_SEARCH_LENGTH} ký tự để tìm học viên.`);
+    if (normalizedQuery.length === 0 || normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
       return;
     }
 
@@ -121,7 +113,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
       startSearchTransition(async () => {
         const result = await searchClassMemberCandidatesAction({
           classId,
-          query: normalizedQuery,
+          query,
         });
 
         if (requestId !== latestSearchRequestRef.current) {
@@ -135,7 +127,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
         }
 
         setCandidates(result.items);
-        setSearchMessage(result.items.length === 0 ? "Không tìm thấy học viên phù hợp." : null);
+        setSearchMessage(result.items.length === 0 ? "Kh\u00f4ng t\u00ecm th\u1ea5y h\u1ecdc vi\u00ean ph\u00f9 h\u1ee3p." : null);
         setSelectedCandidate((current) =>
           current && result.items.some((item) => item.userId === current.userId) ? current : null,
         );
@@ -150,11 +142,26 @@ export function AddMemberForm({ classId }: { classId: string }) {
   function handleCandidateSearchChange(value: string) {
     setQuery(value);
     setSelectedCandidate(null);
+
+    const normalizedQuery = normalizeProfileSearchText(value);
+    if (normalizedQuery.length === 0) {
+      setCandidates([]);
+      setSearchMessage(null);
+      return;
+    }
+
+    if (normalizedQuery.length < MIN_MEMBER_SEARCH_LENGTH) {
+      setCandidates([]);
+      setSearchMessage(`H\u00e3y nh\u1eadp \u00edt nh\u1ea5t ${MIN_MEMBER_SEARCH_LENGTH} k\u00fd t\u1ef1 \u0111\u1ec3 t\u00ecm h\u1ecdc vi\u00ean.`);
+      return;
+    }
+
+    setSearchMessage(null);
   }
 
   function handleSelectCandidate(candidate: ClassMemberCandidate) {
     setSelectedCandidate(candidate);
-    setQuery(candidate.username);
+    setQuery(candidate.fullName);
     setCandidates((current) =>
       current.some((item) => item.userId === candidate.userId) ? current : [candidate, ...current],
     );
@@ -175,7 +182,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
           classId,
           userId: selectedCandidate.userId,
         });
-        toast.success(`Đã thêm học viên ${selectedCandidate.username}`);
+        toast.success(`Đã thêm học viên ${selectedCandidate.fullName}`);
         setQuery("");
         setCandidates([]);
         setSelectedCandidate(null);
@@ -194,7 +201,7 @@ export function AddMemberForm({ classId }: { classId: string }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--muted-foreground)]" />
           <Input
             value={query}
-            placeholder="Tìm theo username, ví dụ: son"
+            placeholder="Tìm theo Họ và Tên, ví dụ: Nguyen Van An hoặc Nguyễn Văn An"
             className="pl-10 pr-10"
             disabled={isAdding}
             onChange={(event) => handleCandidateSearchChange(event.target.value)}
@@ -212,13 +219,13 @@ export function AddMemberForm({ classId }: { classId: string }) {
 
       {selectedCandidate ? (
         <div className="rounded-[14px] border border-[color:var(--primary)] bg-[color:var(--primary)]/5 px-4 py-3 text-sm">
-          Đã chọn học viên <strong>{selectedCandidate.username}</strong>.
+          Đã chọn học viên <strong>{selectedCandidate.fullName}</strong> <span className="text-[color:var(--muted-foreground)]">(@{selectedCandidate.username})</span>.
         </div>
       ) : null}
 
       {query.trim().length === 0 ? (
         <div className="rounded-[14px] border border-dashed border-[color:var(--border)] bg-[color:var(--muted)]/50 p-4 text-sm text-[color:var(--muted-foreground)]">
-          Gõ ít nhất 2 ký tự đầu của username để tìm học viên chưa thuộc lớp này.
+          Gõ ít nhất 2 ký tự của Họ và Tên để tìm học viên chưa thuộc lớp này. Hệ thống hỗ trợ cả nhập có dấu và không dấu.
         </div>
       ) : candidates.length > 0 ? (
         <div className="space-y-2">
@@ -239,8 +246,8 @@ export function AddMemberForm({ classId }: { classId: string }) {
                 onClick={() => handleSelectCandidate(candidate)}
               >
                 <div>
-                  <p className="font-medium">{candidate.username}</p>
-                  <p className="text-xs text-[color:var(--muted-foreground)]">Học viên</p>
+                  <p className="font-medium">{candidate.fullName}</p>
+                  <p className="text-xs text-[color:var(--muted-foreground)]">@{candidate.username}</p>
                 </div>
                 {isSelected ? <span className="text-xs font-semibold text-[color:var(--primary-strong)]">Đã chọn</span> : null}
               </button>
@@ -334,11 +341,11 @@ export function SuggestRootForm({
 export function RemoveMemberButton({
   classId,
   memberId,
-  username,
+  memberName,
 }: {
   classId: string;
   memberId: string;
-  username: string;
+  memberName: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -355,7 +362,7 @@ export function RemoveMemberButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Gỡ học viên khỏi lớp?</AlertDialogTitle>
           <AlertDialogDescription>
-            Học viên <strong>{username}</strong> sẽ không còn thấy các gợi ý mới từ lớp này nữa.
+            Học viên <strong>{memberName}</strong> sẽ không còn thấy các gợi ý mới từ lớp này nữa.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

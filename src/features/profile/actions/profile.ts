@@ -12,6 +12,7 @@ function revalidateProfileShell() {
 
 export async function updateProfileSettingsAction(formData: FormData) {
   const parsed = profileSettingsSchema.safeParse({
+    fullName: formData.get("fullName"),
     contactEmail: formData.get("contactEmail"),
   });
 
@@ -26,6 +27,7 @@ export async function updateProfileSettingsAction(formData: FormData) {
 
   try {
     await updateCurrentProfileSettings({
+      fullName: parsed.data.fullName,
       contactEmail: parsed.data.contactEmail,
       avatarFile: avatar instanceof File ? avatar : null,
     });

@@ -62,10 +62,14 @@ describe("class-manager flow guards", () => {
     ).toThrow("Hãy nhập ít nhất 2 ký tự để tìm học viên");
   });
 
-  it("shows search guidance before the teacher types a username prefix", () => {
+  it("shows search guidance before the teacher types a student name", () => {
     render(<AddMemberForm classId="11111111-1111-4111-8111-111111111111" />);
 
-    expect(screen.getByText("Gõ ít nhất 2 ký tự đầu của username để tìm học viên chưa thuộc lớp này.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Gõ ít nhất 2 ký tự của Họ và Tên để tìm học viên chưa thuộc lớp này. Hệ thống hỗ trợ cả nhập có dấu và không dấu.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Thêm" })).toBeDisabled();
   });
 
@@ -74,7 +78,10 @@ describe("class-manager flow guards", () => {
 
     render(<AddMemberForm classId="11111111-1111-4111-8111-111111111111" />);
 
-    await user.type(screen.getByPlaceholderText("Tìm theo username, ví dụ: son"), "s");
+    await user.type(
+      screen.getByPlaceholderText("Tìm theo Họ và Tên, ví dụ: Nguyen Van An hoặc Nguyễn Văn An"),
+      "s",
+    );
 
     expect(screen.getByText("Hãy nhập ít nhất 2 ký tự để tìm học viên.")).toBeInTheDocument();
   });
@@ -92,7 +99,9 @@ describe("class-manager flow guards", () => {
   it("shows a guidance state when no published root words are available", () => {
     render(<SuggestRootForm classId="11111111-1111-1111-1111-111111111111" rootWords={[]} />);
 
-    expect(screen.getByText("Hãy xuất bản ít nhất một root word trong khu vực admin trước khi tạo gợi ý cho lớp.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Hãy xuất bản ít nhất một root word trong khu vực admin trước khi tạo gợi ý cho lớp."),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gợi ý" })).not.toBeInTheDocument();
   });
 });

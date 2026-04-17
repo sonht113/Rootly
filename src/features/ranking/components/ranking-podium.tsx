@@ -58,8 +58,8 @@ export function RankingPodium({ entries }: RankingPodiumProps) {
 
               <div className="relative mx-auto w-fit">
                 <Avatar className={cn("border-2 bg-white", slot.avatarClassName)}>
-                  {entry?.avatarUrl ? <AvatarImage src={entry.avatarUrl} alt={entry.username} /> : null}
-                  <AvatarFallback>{getAvatarFallback(entry?.username ?? `Hạng ${slot.rank}`)}</AvatarFallback>
+                  {entry?.avatarUrl ? <AvatarImage src={entry.avatarUrl} alt={entry.displayName} /> : null}
+                  <AvatarFallback>{getAvatarFallback(entry?.displayName ?? `Hạng ${slot.rank}`)}</AvatarFallback>
                 </Avatar>
                 <span className={cn("absolute -bottom-2 right-0 inline-flex size-10 items-center justify-center rounded-full text-base font-bold shadow-sm", slot.badgeClassName)}>
                   {slot.rank}
@@ -68,7 +68,7 @@ export function RankingPodium({ entries }: RankingPodiumProps) {
 
               <div className="pb-6 pt-5">
                 <p className={cn("truncate [font-family:var(--font-display)] font-extrabold text-[#191c1e]", slot.rank === 1 ? "text-2xl" : "text-xl")}>
-                  {entry?.username ?? `Hạng #${slot.rank}`}
+                  {entry?.displayName ?? `Hạng #${slot.rank}`}
                 </p>
                 <p className={cn("mt-2 text-sm font-semibold", slot.valueClassName)}>{entry?.valueLabel ?? "Chưa có điểm"}</p>
               </div>

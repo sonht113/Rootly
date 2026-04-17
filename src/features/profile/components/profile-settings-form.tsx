@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Loader2, Mail, ShieldCheck, Trash2, Upload } from "lucide-react";
+import { Loader2, Mail, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ import { removeProfileAvatarAction, updateProfileSettingsAction } from "@/featur
 import {
   PROFILE_AVATAR_ACCEPT_ATTRIBUTE,
   PROFILE_AVATAR_MAX_BYTES,
+  getProfileAvatarValidationError,
 } from "@/lib/validations/profile";
 import { getProfileDisplay } from "@/lib/utils/profile";
 import type { ProfileRow } from "@/types/domain";
@@ -25,15 +26,15 @@ interface ProfileSettingsFormProps {
 
 export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
   const router = useRouter();
+  const [fullName, setFullName] = useState(profile.full_name);
   const [contactEmail, setContactEmail] = useState(profile.email ?? "");
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
   const [isSaving, startSavingTransition] = useTransition();
   const [isRemovingAvatar, startRemovingAvatarTransition] = useTransition();
-  const { displayName, initials, roleLabel } = getProfileDisplay(profile);
-
-  useEffect(() => {
-    setContactEmail(profile.email ?? "");
-  }, [profile.email]);
+  const { displayName, initials, roleLabel } = getProfileDisplay({
+    ...profile,
+    full_name: fullName,
+  });
 
   const previewUrl = useMemo(() => {
     if (!selectedAvatar) {
@@ -53,11 +54,28 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
     };
   }, [previewUrl, profile.avatar_url, selectedAvatar]);
 
+  function handleAvatarSelect(file: File | null) {
+    if (!file) {
+      setSelectedAvatar(null);
+      return;
+    }
+
+    const validationError = getProfileAvatarValidationError(file);
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setSelectedAvatar(file);
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     startSavingTransition(async () => {
       const formData = new FormData();
+      formData.set("fullName", fullName);
       formData.set("contactEmail", contactEmail.trim());
 
       if (selectedAvatar) {
@@ -119,7 +137,7 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
                 <UploadDropzone
                   accept={PROFILE_AVATAR_ACCEPT_ATTRIBUTE}
                   fileName={selectedAvatar?.name ?? null}
-                  onSelect={setSelectedAvatar}
+                  onSelect={handleAvatarSelect}
                   helperText={`JPG, PNG hoặc WebP. Tối đa ${Math.floor(PROFILE_AVATAR_MAX_BYTES / 1024 / 1024)} MB.`}
                   className="items-stretch px-4 py-5 text-left"
                 />
@@ -140,8 +158,17 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="profile-display-name">Tên hiển thị</Label>
-                  <Input id="profile-display-name" value={displayName} readOnly disabled />
+                  <Label htmlFor="profile-full-name">Họ và Tên</Label>
+                  <div className="relative">
+                    <UserRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[color:var(--muted-foreground)]" />
+                    <Input
+                      id="profile-full-name"
+                      value={fullName}
+                      disabled={isBusy}
+                      className="pl-12"
+                      onChange={(event) => setFullName(event.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -192,7 +219,7 @@ export function ProfileSettingsForm({ profile }: ProfileSettingsFormProps) {
               <div>
                 <p className="font-semibold text-[color:var(--foreground)]">Giữ nguyên chiến lược đăng nhập hiện tại</p>
                 <p className="mt-1">
-                  Username là định danh chính cho flow đăng nhập hiện tại. Trang này chỉ mở chỉnh sửa email liên hệ và avatar.
+                  Username là định danh chính cho flow đăng nhập hiện tại. Trang này cho phép cập nhật Họ và Tên, email liên hệ và avatar mà không làm lệch flow login.
                 </p>
               </div>
             </div>

@@ -16,7 +16,6 @@ import {
   Trash2,
 } from "lucide-react";
 import {
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -194,10 +193,10 @@ export function CalendarPlanner({
   const router = useRouter();
   const quickAddPanelRef = useRef<HTMLDivElement>(null);
   const [anchorDate, setAnchorDate] = useState(getCalendarToday);
-  const [quickAddRootWordId, setQuickAddRootWordId] = useState(
+  const [quickAddRootWordIdState, setQuickAddRootWordId] = useState(
     () => rootWords[0]?.id ?? "",
   );
-  const [quickAddScheduleFor, setQuickAddScheduleFor] =
+  const [quickAddScheduleForState, setQuickAddScheduleFor] =
     useState<QuickAddScheduleChoice>(NEXT_AVAILABLE_SLOT);
   const [isQuickAddPending, startQuickAddTransition] = useTransition();
   const weekRange = getWeekRange(anchorDate);
@@ -324,6 +323,16 @@ export function CalendarPlanner({
   );
   const isCurrentWeek =
     format(weekRange.start, "yyyy-MM-dd") === currentWeekStartKey;
+  const quickAddRootWordId = availableRootWords.some(
+    (rootWord) => rootWord.id === quickAddRootWordIdState,
+  )
+    ? quickAddRootWordIdState
+    : (availableRootWords[0]?.id ?? "");
+  const quickAddScheduleFor =
+    quickAddScheduleForState === NEXT_AVAILABLE_SLOT ||
+    days.some((day) => day.dateKey === quickAddScheduleForState)
+      ? quickAddScheduleForState
+      : NEXT_AVAILABLE_SLOT;
   const quickAddSelectedRoot =
     availableRootWords.find((rootWord) => rootWord.id === quickAddRootWordId) ?? null;
   const resolvedQuickAddDate = quickAddSelectedRoot
@@ -383,29 +392,6 @@ export function CalendarPlanner({
       scheduleFor: suggestedDate,
     };
   }, [availableRootWords, days, visibleDateKeys, weeklyPlanLookup]);
-
-  useEffect(() => {
-    if (
-      quickAddRootWordId &&
-      availableRootWords.some((rootWord) => rootWord.id === quickAddRootWordId)
-    ) {
-      return;
-    }
-
-    setQuickAddRootWordId(
-      availableRootWords[0]?.id ?? "",
-    );
-  }, [availableRootWords, quickAddRootWordId]);
-
-  useEffect(() => {
-    if (quickAddScheduleFor === NEXT_AVAILABLE_SLOT) {
-      return;
-    }
-
-    if (!days.some((day) => day.dateKey === quickAddScheduleFor)) {
-      setQuickAddScheduleFor(NEXT_AVAILABLE_SLOT);
-    }
-  }, [days, quickAddScheduleFor]);
 
   async function handleDelete(planId: string) {
     try {
@@ -577,7 +563,6 @@ export function CalendarPlanner({
           quickAddResolvedDate={resolvedQuickAddDate}
           miniLibraryRoots={miniLibraryRoots}
           smartSuggestion={smartSuggestion}
-          emptyStateMessage={noAvailableRootWordsMessage}
           isPending={isQuickAddPending}
           onRootWordChange={setQuickAddRootWordId}
           onScheduleForChange={setQuickAddScheduleFor}
@@ -598,7 +583,6 @@ interface CalendarSideRailProps {
   quickAddResolvedDate: string | null;
   miniLibraryRoots: Array<{ id: string; root: string; meaning: string }>;
   smartSuggestion: SmartSuggestion | null;
-  emptyStateMessage: string;
   isPending: boolean;
   onRootWordChange: (value: string) => void;
   onScheduleForChange: (value: QuickAddScheduleChoice) => void;
@@ -615,7 +599,6 @@ function CalendarSideRail({
   quickAddResolvedDate,
   miniLibraryRoots,
   smartSuggestion,
-  emptyStateMessage,
   isPending,
   onRootWordChange,
   onScheduleForChange,
@@ -631,7 +614,6 @@ function CalendarSideRail({
         quickAddScheduleFor={quickAddScheduleFor}
         quickAddOptions={quickAddOptions}
         quickAddResolvedDate={quickAddResolvedDate}
-        emptyStateMessage={emptyStateMessage}
         isPending={isPending}
         onRootWordChange={onRootWordChange}
         onScheduleForChange={onScheduleForChange}
@@ -640,7 +622,6 @@ function CalendarSideRail({
       <MiniLibraryPicker
         miniLibraryRoots={miniLibraryRoots}
         smartSuggestion={smartSuggestion}
-        emptyStateMessage={emptyStateMessage}
         onUseRoot={onUseRoot}
       />
     </aside>
@@ -654,7 +635,6 @@ interface QuickAddPanelProps {
   quickAddScheduleFor: QuickAddScheduleChoice;
   quickAddOptions: QuickAddOption[];
   quickAddResolvedDate: string | null;
-  emptyStateMessage: string;
   isPending: boolean;
   onRootWordChange: (value: string) => void;
   onScheduleForChange: (value: QuickAddScheduleChoice) => void;
@@ -668,7 +648,6 @@ function QuickAddPanel({
   quickAddScheduleFor,
   quickAddOptions,
   quickAddResolvedDate,
-  emptyStateMessage,
   isPending,
   onRootWordChange,
   onScheduleForChange,
@@ -758,14 +737,12 @@ function QuickAddPanel({
 interface MiniLibraryPickerProps {
   miniLibraryRoots: Array<{ id: string; root: string; meaning: string }>;
   smartSuggestion: SmartSuggestion | null;
-  emptyStateMessage: string;
   onUseRoot: (rootWordId: string, scheduleFor?: QuickAddScheduleChoice) => void;
 }
 
 function MiniLibraryPicker({
   miniLibraryRoots,
   smartSuggestion,
-  emptyStateMessage,
   onUseRoot,
 }: MiniLibraryPickerProps) {
   return (

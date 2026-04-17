@@ -5,9 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { getAvatarFallback } from "@/lib/utils/avatar";
 import { cn } from "@/lib/utils/cn";
+import { getProfileDisplayName } from "@/lib/utils/profile";
 import type { RankingRow as RankingRowType } from "@/types/domain";
 
 export function RankingRow({ row }: { row: RankingRowType }) {
+  const displayName = getProfileDisplayName(row.full_name, row.username);
+
   return (
     <TableRow className={cn(row.is_current_user && "bg-[color:var(--primary-soft)]/50")}>
       <TableCell className="font-semibold">
@@ -19,10 +22,10 @@ export function RankingRow({ row }: { row: RankingRowType }) {
       <TableCell>
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarFallback>{getAvatarFallback(row.username)}</AvatarFallback>
+            <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{row.username}</p>
+            <p className="font-medium">{displayName}</p>
             <p className="text-xs capitalize text-[color:var(--muted-foreground)]">{getRoleLabel(row.role)}</p>
           </div>
         </div>

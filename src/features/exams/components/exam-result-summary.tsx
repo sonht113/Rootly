@@ -9,6 +9,7 @@ import {
   formatExamScore,
   getExamAttemptDurationFromRow,
 } from "@/lib/utils/exams";
+import { getProfileDisplayName } from "@/lib/utils/profile";
 import type { ExamAttemptRow, ExamLeaderboardRow } from "@/types/domain";
 
 interface ExamResultSummaryProps {
@@ -69,22 +70,26 @@ export function ExamResultSummary({ examId, attempt, leaderboard }: ExamResultSu
               Chua co nguoi hoc nao khac hoan thanh ky thi nay.
             </div>
           ) : (
-            leaderboard.slice(0, 5).map((entry) => (
-              <div
-                key={entry.user_id}
-                className="flex items-center justify-between rounded-[14px] border border-[color:var(--border)] px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    #{entry.rank} | {entry.is_current_user ? `${entry.username} (Ban)` : entry.username}
-                  </p>
-                  <p className="text-xs text-[color:var(--muted-foreground)]">
-                    {entry.correct_answers}/{entry.total_questions} cau dung | {formatExamDuration(entry.duration_seconds)}
-                  </p>
+            leaderboard.slice(0, 5).map((entry) => {
+              const displayName = getProfileDisplayName(entry.full_name, entry.username);
+
+              return (
+                <div
+                  key={entry.user_id}
+                  className="flex items-center justify-between rounded-[14px] border border-[color:var(--border)] px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      #{entry.rank} | {entry.is_current_user ? `${displayName} (Ban)` : displayName}
+                    </p>
+                    <p className="text-xs text-[color:var(--muted-foreground)]">
+                      {entry.correct_answers}/{entry.total_questions} cau dung | {formatExamDuration(entry.duration_seconds)}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-[color:var(--primary-strong)]">{entry.score}%</p>
                 </div>
-                <p className="text-sm font-semibold text-[color:var(--primary-strong)]">{entry.score}%</p>
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>

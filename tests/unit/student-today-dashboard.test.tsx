@@ -39,12 +39,12 @@ const viewModel: TodayDashboardViewModel = {
   },
   learningCard: {
     variant: "root",
-    badgeLabel: "TỪ GỐC CỦA NGÀY",
+    badgeLabel: "ĐỀ XUẤT HÔM NAY",
     title: "spect",
     supportText: "Nghĩa: nhìn kỹ.",
     ctaLabel: "Bắt đầu học",
     ctaHref: "/library/root-1",
-    source: "today",
+    source: "admin-recommended",
     words: [
       {
         order: 1,
@@ -97,6 +97,7 @@ describe("StudentTodayDashboard", () => {
     expect(screen.getByRole("heading", { name: "Chào buổi tối, Son Nguyen 👋" })).toBeInTheDocument();
     expect(screen.getByText("MỤC TIÊU NGÀY")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("ĐỀ XUẤT HÔM NAY")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Bắt đầu học/i })).toHaveAttribute("href", "/library/root-1");
     expect(screen.getByRole("link", { name: "Xem tất cả" })).toHaveAttribute("href", "/reviews");
     expect(screen.getByRole("link", { name: /Mở danh sách ôn tập/i })).toHaveAttribute("href", "/reviews");

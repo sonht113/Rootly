@@ -16,9 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createExamAction } from "@/features/exams/actions/exams";
+import { getRoleExamDetailPath } from "@/lib/navigation/role-routes";
 import { formatExamWindow, getExamScopeLabel, getExamStatusLabel } from "@/lib/utils/exams";
 import { createExamSchema } from "@/lib/validations/exams";
-import type { ClassRow } from "@/types/domain";
+import type { AppRole, ClassRow } from "@/types/domain";
 
 type CreateExamFormValues = z.input<typeof createExamSchema>;
 
@@ -47,9 +48,15 @@ interface TeacherExamsPanelProps {
   }>;
   classes: Array<Pick<ClassRow, "id" | "name">>;
   initialClassId?: string | null;
+  managerRole?: AppRole;
 }
 
-export function TeacherExamsPanel({ exams, classes, initialClassId = null }: TeacherExamsPanelProps) {
+export function TeacherExamsPanel({
+  exams,
+  classes,
+  initialClassId = null,
+  managerRole = "teacher",
+}: TeacherExamsPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const normalizedInitialClassId = initialClassId && classes.some((classItem) => classItem.id === initialClassId) ? initialClassId : null;
@@ -71,7 +78,7 @@ export function TeacherExamsPanel({ exams, classes, initialClassId = null }: Tea
       try {
         const exam = await createExamAction(values);
         toast.success("Đã tạo kỳ thi mới.");
-        router.push(`/teacher/exams/${exam.id}`);
+        router.push(getRoleExamDetailPath(managerRole, exam.id));
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Không thể tạo kỳ thi.");
@@ -188,7 +195,7 @@ export function TeacherExamsPanel({ exams, classes, initialClassId = null }: Tea
             exams.map((exam) => (
               <Link
                 key={exam.id}
-                href={`/teacher/exams/${exam.id}`}
+                href={getRoleExamDetailPath(managerRole, exam.id)}
                 className="flex items-start justify-between gap-4 rounded-[16px] border border-[color:var(--border)] p-4 transition hover:border-[color:var(--primary)]/40 hover:bg-[color:var(--muted)]/30"
               >
                 <div className="space-y-2">

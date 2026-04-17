@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { QuestionBankManager } from "@/features/exams/components/question-bank-manager";
 import { TeacherExamsPanel } from "@/features/exams/components/teacher-exams-panel";
+import { getCurrentProfile } from "@/lib/auth/session";
 import { getExamManagementOverview } from "@/server/repositories/exams-repository";
 
 export default async function TeacherExamsPage({
@@ -8,9 +9,10 @@ export default async function TeacherExamsPage({
 }: {
   searchParams: Promise<{ classId?: string }>;
 }) {
-  const [{ questionBankItems, exams, classes }, resolvedSearchParams] = await Promise.all([
+  const [{ questionBankItems, exams, classes }, resolvedSearchParams, profile] = await Promise.all([
     getExamManagementOverview(),
     searchParams,
+    getCurrentProfile(),
   ]);
   const initialClassId =
     typeof resolvedSearchParams.classId === "string" && classes.some((classItem) => classItem.id === resolvedSearchParams.classId)
@@ -27,7 +29,12 @@ export default async function TeacherExamsPage({
 
       <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
         <QuestionBankManager items={questionBankItems} />
-        <TeacherExamsPanel exams={exams} classes={classes} initialClassId={initialClassId} />
+        <TeacherExamsPanel
+          exams={exams}
+          classes={classes}
+          initialClassId={initialClassId}
+          managerRole={profile?.role ?? "teacher"}
+        />
       </div>
     </div>
   );

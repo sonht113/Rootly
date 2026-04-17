@@ -6,6 +6,9 @@ const mockSessionMemberInsert = vi.fn();
 const mockAdminClassMembers = vi.fn();
 const mockAdminProfilesSearch = vi.fn();
 const mockAdminProfileById = vi.fn();
+const mockAdminProfilesEq = vi.fn();
+const mockAdminProfilesIlike = vi.fn();
+const mockAdminProfilesOrder = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: vi.fn(async () => ({
@@ -51,9 +54,18 @@ vi.mock("@/lib/supabase/admin", () => ({
 
       if (table === "profiles") {
         const searchQuery = {
-          eq: () => searchQuery,
-          ilike: () => searchQuery,
-          order: () => searchQuery,
+          eq: (...args: unknown[]) => {
+            mockAdminProfilesEq(...args);
+            return searchQuery;
+          },
+          ilike: (...args: unknown[]) => {
+            mockAdminProfilesIlike(...args);
+            return searchQuery;
+          },
+          order: (...args: unknown[]) => {
+            mockAdminProfilesOrder(...args);
+            return searchQuery;
+          },
           limit: mockAdminProfilesSearch,
           maybeSingle: mockAdminProfileById,
         };
@@ -78,6 +90,9 @@ describe("classes repository member management", () => {
     mockAdminClassMembers.mockReset();
     mockAdminProfilesSearch.mockReset();
     mockAdminProfileById.mockReset();
+    mockAdminProfilesEq.mockReset();
+    mockAdminProfilesIlike.mockReset();
+    mockAdminProfilesOrder.mockReset();
 
     mockClassAccess.mockResolvedValue({
       data: { id: "class-1" },
@@ -85,24 +100,27 @@ describe("classes repository member management", () => {
     });
   });
 
-  it("searches student candidates by prefix and excludes existing class members", async () => {
+  it("searches student candidates by full_name and supports accent-insensitive matching", async () => {
     mockAdminClassMembers.mockResolvedValue({
       data: [{ user_id: "student-2" }],
       error: null,
     });
     mockAdminProfilesSearch.mockResolvedValue({
       data: [
-        { auth_user_id: "student-1", username: "son" },
-        { auth_user_id: "student-2", username: "sonho" },
-        { auth_user_id: "student-3", username: "sonic" },
+        { auth_user_id: "student-1", full_name: "Nguyễn An", username: "an.nguyen" },
+        { auth_user_id: "student-2", full_name: "Nguyễn Bình", username: "binh.nguyen" },
+        { auth_user_id: "student-3", full_name: "Lê Nguyễn Chi", username: "chi.le" },
       ],
       error: null,
     });
 
-    await expect(searchClassMemberCandidates("class-1", "Son")).resolves.toEqual([
-      { userId: "student-1", username: "son" },
-      { userId: "student-3", username: "sonic" },
+    await expect(searchClassMemberCandidates("class-1", "Nguyễn")).resolves.toEqual([
+      { userId: "student-1", fullName: "Nguyễn An", username: "an.nguyen" },
+      { userId: "student-3", fullName: "Lê Nguyễn Chi", username: "chi.le" },
     ]);
+    expect(mockAdminProfilesEq).toHaveBeenCalledWith("role", "student");
+    expect(mockAdminProfilesIlike).toHaveBeenCalledWith("full_name_search", "%nguyen%");
+    expect(mockAdminProfilesOrder).toHaveBeenCalledWith("full_name");
   });
 
   it("refuses to search candidates when the current user cannot manage the class", async () => {
@@ -111,13 +129,16 @@ describe("classes repository member management", () => {
       error: null,
     });
 
-    await expect(searchClassMemberCandidates("class-1", "son")).rejects.toThrow("Bạn không có quyền quản lý lớp này.");
+    await expect(searchClassMemberCandidates("class-1", "nguyen")).rejects.toThrow(
+      "Bạn không có quyền quản lý lớp này.",
+    );
   });
 
   it("rejects adding a student who is already a class member", async () => {
     mockAdminProfileById.mockResolvedValue({
       data: {
         auth_user_id: "student-1",
+        full_name: "Nguyễn Văn An",
         username: "son",
         role: "student",
       },
@@ -128,7 +149,9 @@ describe("classes repository member management", () => {
       error: null,
     });
 
-    await expect(addClassMemberByUserId("class-1", "student-1")).rejects.toThrow("Học viên son đã ở trong lớp này.");
+    await expect(addClassMemberByUserId("class-1", "student-1")).rejects.toThrow(
+      "Học viên Nguyễn Văn An (@son) đã ở trong lớp này.",
+    );
     expect(mockSessionMemberInsert).not.toHaveBeenCalled();
   });
 
@@ -136,6 +159,7 @@ describe("classes repository member management", () => {
     mockAdminProfileById.mockResolvedValue({
       data: {
         auth_user_id: "student-1",
+        full_name: "Nguyễn Văn An",
         username: "son",
         role: "student",
       },
@@ -151,6 +175,7 @@ describe("classes repository member management", () => {
 
     await expect(addClassMemberByUserId("class-1", "student-1")).resolves.toEqual({
       userId: "student-1",
+      fullName: "Nguyễn Văn An",
       username: "son",
     });
 

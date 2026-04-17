@@ -4,6 +4,7 @@ export interface RankingLeaderboardEntry {
   userId: string;
   rank: number;
   rankLabel: string;
+  displayName: string;
   username: string;
   avatarUrl: string | null;
   statusTier: RankingStatusTier;
@@ -15,6 +16,7 @@ export interface RankingLeaderboardEntry {
 export interface RankingPodiumEntry {
   userId: string;
   rank: number;
+  displayName: string;
   username: string;
   avatarUrl: string | null;
   valueLabel: string;

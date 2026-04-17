@@ -4,6 +4,8 @@ import { AppSidebarNav } from "@/components/layouts/app-sidebar-nav";
 import { AppTopbar } from "@/components/layouts/app-topbar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationsRealtimeBridge } from "@/features/notifications/components/notifications-realtime-bridge";
+import { NotificationsUnreadProvider } from "@/features/notifications/components/notifications-unread-provider";
+import { getRoleHomePath } from "@/lib/navigation/role-routes";
 import { getProfileDisplay } from "@/lib/utils/profile";
 import { getCurrentUserUnreadNotificationCount } from "@/server/repositories/notifications-repository";
 import type { ProfileRow } from "@/types/domain";
@@ -21,7 +23,7 @@ export async function AppShell({ profile, streak, children }: AppShellProps) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="hidden border-r border-(--border) bg-(--sidebar) px-5 py-6 lg:flex lg:flex-col">
-        <Link href="/today" className="mb-8 flex items-center gap-3">
+        <Link href={getRoleHomePath(profile.role)} className="mb-8 flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-2xl bg-(--primary) text-lg font-bold text-white shadow-sm">
             R
           </div>
@@ -52,9 +54,11 @@ export async function AppShell({ profile, streak, children }: AppShellProps) {
       </aside>
       <main className="min-h-screen">
         <div className="mx-auto flex min-h-screen max-w-4/5 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-          <NotificationsRealtimeBridge userId={profile.auth_user_id} />
-          <AppTopbar profile={profile} streak={streak} unreadNotificationCount={unreadNotificationCount} />
-          {children}
+          <NotificationsUnreadProvider initialUnreadCount={unreadNotificationCount}>
+            <NotificationsRealtimeBridge userId={profile.auth_user_id} />
+            <AppTopbar profile={profile} streak={streak} unreadNotificationCount={unreadNotificationCount} />
+            {children}
+          </NotificationsUnreadProvider>
         </div>
       </main>
     </div>

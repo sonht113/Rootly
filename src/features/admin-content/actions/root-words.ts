@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
-import { getCurrentSession } from "@/lib/auth/session";
+import { getCurrentSession, requireRole } from "@/lib/auth/session";
 import { rootWordSchema } from "@/lib/validations/root-words";
+import { setTodayDailyRootRecommendation } from "@/server/repositories/daily-root-recommendations-repository";
 import { deleteRootWord, upsertRootWord } from "@/server/repositories/root-words-repository";
+
+const rootWordIdSchema = z.string().uuid("Root word khong hop le.");
 
 export async function saveRootWordAction(input: unknown) {
   const user = await getCurrentSession();
@@ -24,3 +28,12 @@ export async function deleteRootWordAction(rootWordId: string) {
   revalidatePath("/library");
 }
 
+export async function setTodayRecommendedRootWordAction(rootWordId: string) {
+  const profile = await requireRole(["admin"]);
+  const parsedRootWordId = rootWordIdSchema.parse(rootWordId);
+
+  await setTodayDailyRootRecommendation(parsedRootWordId, profile.auth_user_id);
+
+  revalidatePath("/admin/root-words");
+  revalidatePath("/today");
+}

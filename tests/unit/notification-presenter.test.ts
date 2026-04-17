@@ -66,6 +66,39 @@ describe("notification-presenter", () => {
     });
   });
 
+  it("maps daily-root-recommendation notifications into inbox list items", () => {
+    const notification: NotificationRow = {
+      id: "notification-3",
+      user_id: "user-1",
+      type: "daily_root_recommendation",
+      title: "Có root từ đề xuất mới cho hôm nay: cred",
+      message: 'Hệ thống vừa đề xuất root từ "cred" (tin, tin tưởng) cho ngày 18/04/2026.',
+      link_href: "/today",
+      metadata: {
+        recommendationDate: "2026-04-18",
+        rootWordId: "root-cred",
+        rootWord: "cred",
+        meaning: "tin, tin tưởng",
+      },
+      is_read: false,
+      read_at: null,
+      source_key: "daily_root_recommendation:2026-04-18:user-1",
+      created_at: "2026-04-18T02:00:00.000Z",
+      updated_at: "2026-04-18T02:00:00.000Z",
+    };
+
+    expect(mapNotificationRowToListItem(notification)).toEqual({
+      id: "notification-3",
+      type: "daily_root_recommendation",
+      typeLabel: "Root từ hôm nay",
+      title: "Có root từ đề xuất mới cho hôm nay: cred",
+      message: 'Hệ thống vừa đề xuất root từ "cred" (tin, tin tưởng) cho ngày 18/04/2026.',
+      linkHref: "/today",
+      isRead: false,
+      createdAtLabel: formatNotificationDate("2026-04-18T02:00:00.000Z"),
+    });
+  });
+
   it("formats notification dates in Ho Chi Minh timezone", () => {
     const formatted = formatNotificationDate("2026-04-14T08:15:00.000Z");
 

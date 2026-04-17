@@ -11,6 +11,7 @@ import { registerSchema } from "@/lib/validations/auth";
 export async function registerUserAction(formData: FormData) {
   const supabaseAdmin = getSupabaseAdmin();
   const parsed = registerSchema.safeParse({
+    fullName: formData.get("fullName"),
     username: formData.get("username"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -23,7 +24,7 @@ export async function registerUserAction(formData: FormData) {
     };
   }
 
-  const { username, email, password } = parsed.data;
+  const { fullName, username, email, password } = parsed.data;
   const internalEmail = usernameToInternalEmail(username);
 
   const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -31,6 +32,7 @@ export async function registerUserAction(formData: FormData) {
     password,
     email_confirm: true,
     user_metadata: {
+      full_name: fullName,
       username,
       contact_email: email || null,
       role: "student",
@@ -58,5 +60,5 @@ export async function registerUserAction(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/today");
+  redirect("/");
 }
