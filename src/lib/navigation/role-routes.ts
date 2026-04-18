@@ -20,6 +20,11 @@ const ROUTE_FAMILIES: RouteFamily[] = [
   },
   {
     bases: {
+      admin: "/admin/users",
+    },
+  },
+  {
+    bases: {
       student: "/notifications",
       teacher: "/teacher/notifications",
       admin: "/admin/notifications",
@@ -215,6 +220,10 @@ export function getAdminRootWordsPath() {
 
 export function getAdminRootWordsNewPath() {
   return "/admin/root-words/new";
+}
+
+export function getAdminUsersPath() {
+  return "/admin/users";
 }
 
 export function getCanonicalPathForRole(role: AppRole, pathname: string) {

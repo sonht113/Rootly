@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getAdminUsersPath,
   getCanonicalPathForRole,
   getRoleClassesPath,
   getRoleFromPathname,
@@ -35,6 +36,12 @@ describe("role-routes", () => {
     expect(getCanonicalPathForRole("teacher", "/today")).toBe("/teacher/classes");
     expect(getCanonicalPathForRole("admin", "/reviews")).toBe("/admin/root-words");
     expect(getCanonicalPathForRole("admin", "/quiz/root-1")).toBe("/admin/root-words");
+  });
+
+  it("treats admin-only user management as admin namespace only", () => {
+    expect(getAdminUsersPath()).toBe("/admin/users");
+    expect(getCanonicalPathForRole("teacher", "/admin/users")).toBe("/teacher/classes");
+    expect(getCanonicalPathForRole("student", "/admin/users")).toBe("/today");
   });
 
   it("keeps already-canonical paths unchanged", () => {

@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { navigationByRole, isNavigationItemActive } from "@/components/layouts/app-navigation";
+import {
+  navigationByRole,
+  isNavigationItemActive,
+} from "@/components/layouts/app-navigation";
 import { cn } from "@/lib/utils/cn";
 import type { AppRole } from "@/types/domain";
 

@@ -1,5 +1,6 @@
 import {
   getAdminRootWordsPath,
+  getAdminUsersPath,
   getRoleFromPathname,
   getRoleLibraryPath,
   getRoleRootsPath,
@@ -29,6 +30,14 @@ export function getTopbarSearchConfig(pathname?: string | null): TopbarSearchCon
       action: getAdminRootWordsPath(),
       label: "Tìm trong nội dung từ gốc",
       placeholder: "Tìm từ gốc đang quản lý...",
+    };
+  }
+
+  if (/^\/admin\/users(?:\/|$)/.test(normalizedPathname)) {
+    return {
+      action: getAdminUsersPath(),
+      label: "Tìm trong danh sách người dùng",
+      placeholder: "Tìm theo họ tên, username hoặc email...",
     };
   }
 

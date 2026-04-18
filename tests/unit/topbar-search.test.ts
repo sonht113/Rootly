@@ -43,6 +43,14 @@ describe("getTopbarSearchConfig", () => {
     });
   });
 
+  it("routes admin user searches back to admin user management", () => {
+    expect(getTopbarSearchConfig("/admin/users")).toEqual({
+      action: "/admin/users",
+      label: "Tìm trong danh sách người dùng",
+      placeholder: "Tìm theo họ tên, username hoặc email...",
+    });
+  });
+
   it("uses the admin namespace for default library searches", () => {
     expect(getTopbarSearchConfig("/admin/notifications")).toEqual({
       action: "/admin/library",

@@ -103,13 +103,22 @@ describe("AppSidebarNav", () => {
     expect(screen.getByRole("link", { name: "Kỳ thi" })).not.toHaveAttribute("aria-current");
   });
 
-  it("keeps the parent item active for nested admin routes", () => {
+  it("keeps the parent item active for nested admin content routes", () => {
     mockedUsePathname.mockReturnValue("/admin/root-words/new");
 
     render(<AppSidebarNav role="admin" />);
 
     expect(screen.getByRole("link", { name: "Nội dung" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Nội dung" })).toHaveAttribute("href", "/admin/root-words");
+  });
+
+  it("shows the admin users item and marks it active", () => {
+    mockedUsePathname.mockReturnValue("/admin/users");
+
+    render(<AppSidebarNav role="admin" />);
+
+    expect(screen.getByRole("link", { name: "Người dùng" })).toHaveAttribute("href", "/admin/users");
+    expect(screen.getByRole("link", { name: "Người dùng" })).toHaveAttribute("aria-current", "page");
   });
 
   it("updates the active item when the pathname changes", () => {
