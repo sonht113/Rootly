@@ -2,7 +2,7 @@
 
 import { Bell, CheckCheck, ChevronRight, Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/features/notifications/actions/notifications";
 import { useNotificationsUnreadState } from "@/features/notifications/components/notifications-unread-provider";
 import type { NotificationListItem } from "@/features/notifications/lib/notification-presenter";
+import { mapNotificationRowToListItem } from "@/features/notifications/lib/notification-presenter";
 import { getRoleFromPathname, getRoleHomePath } from "@/lib/navigation/role-routes";
 import { cn } from "@/lib/utils/cn";
 
@@ -20,17 +21,81 @@ interface NotificationsInboxProps {
   unreadCount: number;
 }
 
+function markNotificationItemRead(items: NotificationListItem[], notificationId: string) {
+  return items.map((item) => {
+    if (item.id !== notificationId || item.isRead) {
+      return item;
+    }
+
+    return {
+      ...item,
+      isRead: true,
+    };
+  });
+}
+
+function markAllNotificationItemsRead(items: NotificationListItem[]) {
+  return items.map((item) => {
+    if (item.isRead) {
+      return item;
+    }
+
+    return {
+      ...item,
+      isRead: true,
+    };
+  });
+}
+
+function upsertNotificationItem(items: NotificationListItem[], nextItem: NotificationListItem) {
+  const existingIndex = items.findIndex((item) => item.id === nextItem.id);
+
+  if (existingIndex === -1) {
+    return [nextItem, ...items];
+  }
+
+  return items.map((item, index) => (index === existingIndex ? nextItem : item));
+}
+
+function removeNotificationItem(items: NotificationListItem[], notificationId: string) {
+  return items.filter((item) => item.id !== notificationId);
+}
+
 export function NotificationsInbox({ items, unreadCount }: NotificationsInboxProps) {
   const pathname = usePathname();
   const router = useRouter();
   const notificationsUnreadState = useNotificationsUnreadState();
+  const [notificationItems, setNotificationItems] = useState(items);
   const [activeNotificationId, setActiveNotificationId] = useState<string | null>(null);
   const [isItemPending, startItemTransition] = useTransition();
   const [isMarkAllPending, startMarkAllTransition] = useTransition();
   const currentUnreadCount = notificationsUnreadState?.unreadCount ?? unreadCount;
   const emptyStateActionHref = getRoleHomePath(getRoleFromPathname(pathname));
 
-  if (items.length === 0) {
+  useEffect(() => {
+    setNotificationItems(items);
+  }, [items]);
+
+  useEffect(() => {
+    if (!notificationsUnreadState) {
+      return;
+    }
+
+    return notificationsUnreadState.subscribeToRealtimeEvents((event) => {
+      setNotificationItems((currentItems) => {
+        switch (event.type) {
+          case "INSERT":
+            return upsertNotificationItem(currentItems, mapNotificationRowToListItem(event.record));
+          case "UPDATE":
+            return upsertNotificationItem(currentItems, mapNotificationRowToListItem(event.record));
+          case "DELETE":
+            return removeNotificationItem(currentItems, event.record.id);
+        }
+      });
+    });
+  }, [notificationsUnreadState]);
+
+  if (notificationItems.length === 0) {
     return (
       <EmptyState
         title="Chưa có thông báo nào"
@@ -65,9 +130,9 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
         return;
       }
 
+      setNotificationItems((currentItems) => markNotificationItemRead(currentItems, item.id));
       notificationsUnreadState?.optimisticallyMarkNotificationRead(item.id);
-      router.push(linkHref);
-      router.refresh();
+      router.push(result.linkHref ?? linkHref);
       setActiveNotificationId(null);
     });
   }
@@ -82,9 +147,9 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
       if (!result.success) {
         toast.error(result.message);
       } else {
+        setNotificationItems((currentItems) => markNotificationItemRead(currentItems, item.id));
         notificationsUnreadState?.optimisticallyMarkNotificationRead(item.id);
         toast.success(result.message);
-        router.refresh();
       }
 
       setActiveNotificationId(null);
@@ -92,6 +157,8 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
   }
 
   function handleMarkAllAsRead() {
+    const unreadItemCount = notificationItems.filter((item) => !item.isRead).length;
+
     startMarkAllTransition(async () => {
       const result = await markAllNotificationsReadAction();
 
@@ -100,9 +167,9 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
         return;
       }
 
-      notificationsUnreadState?.optimisticallyMarkAllNotificationsRead(result.updatedCount);
+      setNotificationItems((currentItems) => markAllNotificationItemsRead(currentItems));
+      notificationsUnreadState?.optimisticallyMarkAllNotificationsRead(Math.max(result.updatedCount, unreadItemCount));
       toast.success(result.message);
-      router.refresh();
     });
   }
 
@@ -137,7 +204,7 @@ export function NotificationsInbox({ items, unreadCount }: NotificationsInboxPro
       </Card>
 
       <div className="space-y-3">
-        {items.map((item) => {
+        {notificationItems.map((item) => {
           const isPending = isItemPending && activeNotificationId === item.id;
 
           return (

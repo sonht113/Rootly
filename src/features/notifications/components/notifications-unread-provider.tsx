@@ -2,7 +2,12 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-import type { NotificationRealtimeRecord } from "@/features/notifications/lib/notifications-realtime";
+import type {
+  NotificationRealtimeEvent,
+  NotificationRealtimeRecord,
+} from "@/features/notifications/lib/notifications-realtime";
+
+export type NotificationRealtimeEventListener = (event: NotificationRealtimeEvent) => void;
 
 interface NotificationsUnreadContextValue {
   unreadCount: number;
@@ -13,6 +18,8 @@ interface NotificationsUnreadContextValue {
   optimisticallyMarkAllNotificationsRead: (count: number) => void;
   applyInsertedNotification: (record: NotificationRealtimeRecord) => void;
   applyUpdatedNotification: (record: NotificationRealtimeRecord, previousRecord: NotificationRealtimeRecord) => void;
+  applyDeletedNotification: (record: NotificationRealtimeRecord) => void;
+  subscribeToRealtimeEvents: (listener: NotificationRealtimeEventListener) => () => void;
 }
 
 const NotificationsUnreadContext = createContext<NotificationsUnreadContextValue | null>(null);
@@ -33,10 +40,19 @@ export function NotificationsUnreadProvider({
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const optimisticReadIdsRef = useRef(new Set<string>());
   const optimisticMarkAllCountRef = useRef(0);
+  const realtimeListenersRef = useRef(new Set<NotificationRealtimeEventListener>());
 
   useEffect(() => {
     setUnreadCount(initialUnreadCount);
+    optimisticReadIdsRef.current.clear();
+    optimisticMarkAllCountRef.current = 0;
   }, [initialUnreadCount]);
+
+  function emitRealtimeEvent(event: NotificationRealtimeEvent) {
+    for (const listener of realtimeListenersRef.current) {
+      listener(event);
+    }
+  }
 
   function incrementUnreadCount(amount = 1) {
     setUnreadCount((currentCount) => currentCount + Math.max(0, amount));
@@ -74,31 +90,85 @@ export function NotificationsUnreadProvider({
     if (!record.is_read) {
       incrementUnreadCount();
     }
+
+    emitRealtimeEvent({
+      type: "INSERT",
+      record,
+    });
   }
 
   function applyUpdatedNotification(
     record: NotificationRealtimeRecord,
     previousRecord: NotificationRealtimeRecord,
   ) {
-    if (record.is_read === previousRecord.is_read) {
-      return;
+    if (record.is_read !== previousRecord.is_read) {
+      if (record.is_read) {
+        if (optimisticReadIdsRef.current.delete(record.id)) {
+          emitRealtimeEvent({
+            type: "UPDATE",
+            record,
+            previousRecord,
+          });
+          return;
+        }
+
+        if (optimisticMarkAllCountRef.current > 0) {
+          optimisticMarkAllCountRef.current -= 1;
+          emitRealtimeEvent({
+            type: "UPDATE",
+            record,
+            previousRecord,
+          });
+          return;
+        }
+
+        decrementUnreadCount();
+      } else {
+        incrementUnreadCount();
+      }
     }
 
-    if (record.is_read) {
+    emitRealtimeEvent({
+      type: "UPDATE",
+      record,
+      previousRecord,
+    });
+  }
+
+  function applyDeletedNotification(record: NotificationRealtimeRecord) {
+    if (!record.is_read) {
       if (optimisticReadIdsRef.current.delete(record.id)) {
+        emitRealtimeEvent({
+          type: "DELETE",
+          record,
+        });
         return;
       }
 
       if (optimisticMarkAllCountRef.current > 0) {
         optimisticMarkAllCountRef.current -= 1;
+        emitRealtimeEvent({
+          type: "DELETE",
+          record,
+        });
         return;
       }
 
       decrementUnreadCount();
-      return;
     }
 
-    incrementUnreadCount();
+    emitRealtimeEvent({
+      type: "DELETE",
+      record,
+    });
+  }
+
+  function subscribeToRealtimeEvents(listener: NotificationRealtimeEventListener) {
+    realtimeListenersRef.current.add(listener);
+
+    return () => {
+      realtimeListenersRef.current.delete(listener);
+    };
   }
 
   return (
@@ -112,6 +182,8 @@ export function NotificationsUnreadProvider({
         optimisticallyMarkAllNotificationsRead,
         applyInsertedNotification,
         applyUpdatedNotification,
+        applyDeletedNotification,
+        subscribeToRealtimeEvents,
       }}
     >
       {children}

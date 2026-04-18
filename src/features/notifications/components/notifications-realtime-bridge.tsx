@@ -2,7 +2,7 @@
 
 import type { RealtimeChannel } from "@supabase/realtime-js";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useNotificationsUnreadState } from "@/features/notifications/components/notifications-unread-provider";
@@ -12,8 +12,6 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 interface NotificationsRealtimeBridgeProps {
   userId: string;
 }
-
-const REFRESH_DEBOUNCE_MS = 250;
 
 type NotificationInsertBroadcastPayload = {
   id: string;
@@ -33,6 +31,15 @@ type NotificationUpdateBroadcastPayload = {
   old_record: NotificationRealtimeRecord;
 };
 
+type NotificationDeleteBroadcastPayload = {
+  id: string;
+  schema: string;
+  table: string;
+  operation: "DELETE";
+  record: null;
+  old_record: NotificationRealtimeRecord;
+};
+
 function showNotificationToast(record: NotificationRealtimeRecord, onOpen: (href: string) => void) {
   const href = record.link_href ?? "/notifications";
 
@@ -45,31 +52,18 @@ function showNotificationToast(record: NotificationRealtimeRecord, onOpen: (href
   });
 }
 
-function scheduleRefresh(
-  refreshTimeoutRef: MutableRefObject<number | null>,
-  refresh: () => void,
-) {
-  if (refreshTimeoutRef.current) {
-    window.clearTimeout(refreshTimeoutRef.current);
-  }
-
-  refreshTimeoutRef.current = window.setTimeout(() => {
-    refreshTimeoutRef.current = null;
-    refresh();
-  }, REFRESH_DEBOUNCE_MS);
-}
-
 export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBridgeProps) {
   const router = useRouter();
   const [supabase] = useState(createBrowserSupabaseClient);
   const notificationsUnreadState = useNotificationsUnreadState();
   const applyInsertedNotificationRef = useRef(notificationsUnreadState?.applyInsertedNotification);
   const applyUpdatedNotificationRef = useRef(notificationsUnreadState?.applyUpdatedNotification);
-  const refreshTimeoutRef = useRef<number | null>(null);
+  const applyDeletedNotificationRef = useRef(notificationsUnreadState?.applyDeletedNotification);
 
   useEffect(() => {
     applyInsertedNotificationRef.current = notificationsUnreadState?.applyInsertedNotification;
     applyUpdatedNotificationRef.current = notificationsUnreadState?.applyUpdatedNotification;
+    applyDeletedNotificationRef.current = notificationsUnreadState?.applyDeletedNotification;
   }, [notificationsUnreadState]);
 
   useEffect(() => {
@@ -82,17 +76,9 @@ export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBri
       void supabase.realtime.setAuth(session?.access_token ?? null);
     });
 
-    const refreshShell = () => {
-      startTransition(() => {
-        router.refresh();
-      });
-    };
-
     function handleNotificationInsert(payload: NotificationInsertBroadcastPayload) {
       applyInsertedNotificationRef.current?.(payload.record);
       showNotificationToast(payload.record, (href) => router.push(href));
-
-      scheduleRefresh(refreshTimeoutRef, refreshShell);
     }
 
     function shouldToastForUpdate(payload: NotificationUpdateBroadcastPayload) {
@@ -117,12 +103,10 @@ export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBri
       if (shouldToastForUpdate(payload)) {
         showNotificationToast(payload.record, (href) => router.push(href));
       }
-
-      scheduleRefresh(refreshTimeoutRef, refreshShell);
     }
 
-    function handleNotificationRefresh() {
-      scheduleRefresh(refreshTimeoutRef, refreshShell);
+    function handleNotificationDelete(payload: NotificationDeleteBroadcastPayload) {
+      applyDeletedNotificationRef.current?.(payload.old_record);
     }
 
     async function setupRealtime() {
@@ -146,8 +130,8 @@ export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBri
         .on("broadcast", { event: "UPDATE" }, ({ payload }: { payload: NotificationUpdateBroadcastPayload }) => {
           handleNotificationUpdate(payload);
         })
-        .on("broadcast", { event: "DELETE" }, () => {
-          handleNotificationRefresh();
+        .on("broadcast", { event: "DELETE" }, ({ payload }: { payload: NotificationDeleteBroadcastPayload }) => {
+          handleNotificationDelete(payload);
         })
         .subscribe();
     }
@@ -157,11 +141,6 @@ export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBri
     return () => {
       isActive = false;
       authSubscription.unsubscribe();
-
-      if (refreshTimeoutRef.current) {
-        window.clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
 
       if (channel) {
         void supabase.removeChannel(channel);

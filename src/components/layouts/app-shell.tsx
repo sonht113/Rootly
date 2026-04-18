@@ -23,7 +23,10 @@ export async function AppShell({ profile, streak, children }: AppShellProps) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="hidden border-r border-(--border) bg-(--sidebar) px-5 py-6 lg:flex lg:flex-col">
-        <Link href={getRoleHomePath(profile.role)} className="mb-8 flex items-center gap-3">
+        <Link
+          href={getRoleHomePath(profile.role)}
+          className="mb-8 flex items-center gap-3"
+        >
           <div className="flex size-11 items-center justify-center rounded-2xl bg-(--primary) text-lg font-bold text-white shadow-sm">
             R
           </div>
@@ -54,9 +57,15 @@ export async function AppShell({ profile, streak, children }: AppShellProps) {
       </aside>
       <main className="min-h-screen">
         <div className="mx-auto flex min-h-screen max-w-4/5 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-          <NotificationsUnreadProvider initialUnreadCount={unreadNotificationCount}>
+          <NotificationsUnreadProvider
+            initialUnreadCount={unreadNotificationCount}
+          >
             <NotificationsRealtimeBridge userId={profile.auth_user_id} />
-            <AppTopbar profile={profile} streak={streak} unreadNotificationCount={unreadNotificationCount} />
+            <AppTopbar
+              profile={profile}
+              streak={streak}
+              unreadNotificationCount={unreadNotificationCount}
+            />
             {children}
           </NotificationsUnreadProvider>
         </div>

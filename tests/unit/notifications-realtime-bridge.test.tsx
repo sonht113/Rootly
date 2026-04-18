@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NotificationsRealtimeBridge } from "@/features/notifications/components/notifications-realtime-bridge";
 import {
@@ -37,6 +37,50 @@ function UnreadCountProbe() {
   return <div>{`Unread: ${notificationsUnreadState?.unreadCount ?? 0}`}</div>;
 }
 
+function createSupabaseMock() {
+  const handlers: Record<string, (payload: unknown) => void> = {};
+  const authUnsubscribe = vi.fn();
+  const channel = {
+    on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
+      handlers[`${type}:${filter.event}`] = callback;
+      return channel;
+    }),
+    subscribe: vi.fn(() => channel),
+  };
+  const supabase = {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: {
+          session: {
+            access_token: "access-token-1",
+          },
+        },
+      }),
+      onAuthStateChange: vi.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: authUnsubscribe,
+          },
+        },
+      })),
+    },
+    realtime: {
+      setAuth: vi.fn().mockResolvedValue(undefined),
+    },
+    channel: vi.fn(() => channel),
+    removeChannel: vi.fn().mockResolvedValue("ok"),
+  };
+
+  mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+
+  return {
+    handlers,
+    authUnsubscribe,
+    channel,
+    supabase,
+  };
+}
+
 describe("NotificationsRealtimeBridge", () => {
   const notificationRecord: NotificationRow = {
     id: "notification-1",
@@ -55,9 +99,6 @@ describe("NotificationsRealtimeBridge", () => {
     updated_at: "2026-04-14T09:00:00.000Z",
   };
 
-  beforeEach(() => {
-  });
-
   afterEach(() => {
     mockedPush.mockReset();
     mockedRefresh.mockReset();
@@ -65,41 +106,8 @@ describe("NotificationsRealtimeBridge", () => {
     mockedCreateBrowserSupabaseClient.mockReset();
   });
 
-  it("subscribes to the current user topic, shows a toast for inserts, and refreshes once", async () => {
-    const handlers: Record<string, (payload: unknown) => void> = {};
-    const authUnsubscribe = vi.fn();
-    const channel = {
-      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
-        handlers[`${type}:${filter.event}`] = callback;
-        return channel;
-      }),
-      subscribe: vi.fn(() => channel),
-    };
-    const supabase = {
-      auth: {
-        getSession: vi.fn().mockResolvedValue({
-          data: {
-            session: {
-              access_token: "access-token-1",
-            },
-          },
-        }),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: authUnsubscribe,
-            },
-          },
-        })),
-      },
-      realtime: {
-        setAuth: vi.fn().mockResolvedValue(undefined),
-      },
-      channel: vi.fn(() => channel),
-      removeChannel: vi.fn().mockResolvedValue("ok"),
-    };
-
-    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+  it("subscribes to the current user topic and shows a toast for inserts without refreshing the shell", async () => {
+    const { handlers, authUnsubscribe, channel, supabase } = createSupabaseMock();
 
     const view = render(<NotificationsRealtimeBridge userId="auth-user-1" />);
 
@@ -134,10 +142,6 @@ describe("NotificationsRealtimeBridge", () => {
     );
     expect(mockedRefresh).not.toHaveBeenCalled();
 
-    await waitFor(() => {
-      expect(mockedRefresh).toHaveBeenCalledTimes(1);
-    });
-
     const toastOptions = mockedToast.mock.calls[0]?.[1];
     toastOptions.action.onClick();
 
@@ -152,39 +156,7 @@ describe("NotificationsRealtimeBridge", () => {
   });
 
   it("increments shared unread count when a new unread notification arrives", async () => {
-    const handlers: Record<string, (payload: unknown) => void> = {};
-    const channel = {
-      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
-        handlers[`${type}:${filter.event}`] = callback;
-        return channel;
-      }),
-      subscribe: vi.fn(() => channel),
-    };
-    const supabase = {
-      auth: {
-        getSession: vi.fn().mockResolvedValue({
-          data: {
-            session: {
-              access_token: "access-token-1",
-            },
-          },
-        }),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-      },
-      realtime: {
-        setAuth: vi.fn().mockResolvedValue(undefined),
-      },
-      channel: vi.fn(() => channel),
-      removeChannel: vi.fn().mockResolvedValue("ok"),
-    };
-
-    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+    const { handlers, channel } = createSupabaseMock();
 
     render(
       <NotificationsUnreadProvider initialUnreadCount={0}>
@@ -215,42 +187,11 @@ describe("NotificationsRealtimeBridge", () => {
     await waitFor(() => {
       expect(screen.getByText("Unread: 1")).toBeInTheDocument();
     });
+    expect(mockedRefresh).not.toHaveBeenCalled();
   });
 
-  it("refreshes unread state for updates without showing a new toast", async () => {
-    const handlers: Record<string, (payload: unknown) => void> = {};
-    const channel = {
-      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
-        handlers[`${type}:${filter.event}`] = callback;
-        return channel;
-      }),
-      subscribe: vi.fn(() => channel),
-    };
-    const supabase = {
-      auth: {
-        getSession: vi.fn().mockResolvedValue({
-          data: {
-            session: {
-              access_token: "access-token-1",
-            },
-          },
-        }),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-      },
-      realtime: {
-        setAuth: vi.fn().mockResolvedValue(undefined),
-      },
-      channel: vi.fn(() => channel),
-      removeChannel: vi.fn().mockResolvedValue("ok"),
-    };
-
-    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+  it("updates unread state for read updates without showing a new toast or refreshing", async () => {
+    const { handlers, channel } = createSupabaseMock();
 
     render(
       <NotificationsUnreadProvider initialUnreadCount={1}>
@@ -283,44 +224,12 @@ describe("NotificationsRealtimeBridge", () => {
     });
 
     expect(mockedToast).not.toHaveBeenCalled();
-
+    expect(mockedRefresh).not.toHaveBeenCalled();
     expect(screen.getByText("Unread: 0")).toBeInTheDocument();
   });
 
-  it("shows a toast for updated unread notifications when the content changes", async () => {
-    const handlers: Record<string, (payload: unknown) => void> = {};
-    const channel = {
-      on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
-        handlers[`${type}:${filter.event}`] = callback;
-        return channel;
-      }),
-      subscribe: vi.fn(() => channel),
-    };
-    const supabase = {
-      auth: {
-        getSession: vi.fn().mockResolvedValue({
-          data: {
-            session: {
-              access_token: "access-token-1",
-            },
-          },
-        }),
-        onAuthStateChange: vi.fn(() => ({
-          data: {
-            subscription: {
-              unsubscribe: vi.fn(),
-            },
-          },
-        })),
-      },
-      realtime: {
-        setAuth: vi.fn().mockResolvedValue(undefined),
-      },
-      channel: vi.fn(() => channel),
-      removeChannel: vi.fn().mockResolvedValue("ok"),
-    };
-
-    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+  it("shows a toast for updated unread notifications when the content changes without refreshing", async () => {
+    const { handlers, channel } = createSupabaseMock();
 
     render(<NotificationsRealtimeBridge userId="auth-user-1" />);
 
@@ -361,9 +270,39 @@ describe("NotificationsRealtimeBridge", () => {
         description: 'Hệ thống vừa đề xuất root từ "cred" cho ngày 18/04/2026.',
       }),
     );
+    expect(mockedRefresh).not.toHaveBeenCalled();
+  });
+
+  it("decrements shared unread count when an unread notification is deleted without refreshing", async () => {
+    const { handlers, channel } = createSupabaseMock();
+
+    render(
+      <NotificationsUnreadProvider initialUnreadCount={1}>
+        <UnreadCountProbe />
+        <NotificationsRealtimeBridge userId="auth-user-1" />
+      </NotificationsUnreadProvider>,
+    );
 
     await waitFor(() => {
-      expect(mockedRefresh).toHaveBeenCalledTimes(1);
+      expect(channel.subscribe).toHaveBeenCalled();
     });
+
+    await act(async () => {
+      handlers["broadcast:DELETE"]({
+        type: "broadcast",
+        event: "DELETE",
+        payload: {
+          id: "broadcast-5",
+          schema: "public",
+          table: "notifications",
+          operation: "DELETE",
+          record: null,
+          old_record: notificationRecord,
+        },
+      });
+    });
+
+    expect(screen.getByText("Unread: 0")).toBeInTheDocument();
+    expect(mockedRefresh).not.toHaveBeenCalled();
   });
 });
