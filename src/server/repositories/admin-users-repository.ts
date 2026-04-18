@@ -6,8 +6,10 @@ import { unwrapSupabaseError } from "@/server/repositories/shared";
 
 export const ADMIN_USERS_PAGE_SIZE = 20;
 
-export interface ManagedUserListItem
-  extends Pick<ProfileRow, "auth_user_id" | "username" | "full_name" | "email" | "avatar_url" | "role" | "created_at"> {}
+export type ManagedUserListItem = Pick<
+  ProfileRow,
+  "auth_user_id" | "username" | "full_name" | "email" | "avatar_url" | "role" | "created_at"
+>;
 
 export interface ManagedUserResourceOwnershipSummary {
   classCount: number;
@@ -49,7 +51,8 @@ export async function getManagedUsersPage(input: {
   const supabaseAdmin = getSupabaseAdmin();
   const pageSize = input.pageSize ?? ADMIN_USERS_PAGE_SIZE;
   const searchFilter = buildManagedUserSearchFilter(input.query);
-  let countQuery: any = supabaseAdmin.from("profiles").select("auth_user_id", { count: "exact", head: true });
+
+  let countQuery = supabaseAdmin.from("profiles").select("auth_user_id", { count: "exact", head: true });
 
   if (input.role) {
     countQuery = countQuery.eq("role", input.role);
@@ -71,7 +74,7 @@ export async function getManagedUsersPage(input: {
   const pageStart = (page - 1) * pageSize;
   const pageEnd = pageStart + pageSize - 1;
 
-  let listQuery: any = supabaseAdmin
+  let listQuery = supabaseAdmin
     .from("profiles")
     .select("auth_user_id, username, full_name, email, avatar_url, role, created_at")
     .order("created_at", { ascending: false })

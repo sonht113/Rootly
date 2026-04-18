@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 
 import type {
   NotificationRealtimeEvent,
@@ -41,12 +41,6 @@ export function NotificationsUnreadProvider({
   const optimisticReadIdsRef = useRef(new Set<string>());
   const optimisticMarkAllCountRef = useRef(0);
   const realtimeListenersRef = useRef(new Set<NotificationRealtimeEventListener>());
-
-  useEffect(() => {
-    setUnreadCount(initialUnreadCount);
-    optimisticReadIdsRef.current.clear();
-    optimisticMarkAllCountRef.current = 0;
-  }, [initialUnreadCount]);
 
   function emitRealtimeEvent(event: NotificationRealtimeEvent) {
     for (const listener of realtimeListenersRef.current) {

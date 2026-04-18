@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Loader2, Save, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -106,12 +106,6 @@ export function AdminUsersManager({
   const [isPending, startTransition] = useTransition();
   const [roleDrafts, setRoleDrafts] = useState<Record<string, AppRole>>({});
   const visiblePageNumbers = useMemo(() => getVisiblePageNumbers(page, totalPages), [page, totalPages]);
-
-  useEffect(() => {
-    setRoleDrafts(
-      Object.fromEntries(items.map((item) => [item.auth_user_id, item.role])) as Record<string, AppRole>,
-    );
-  }, [items]);
 
   function handleRoleDraftChange(userId: string, nextRole: AppRole) {
     setRoleDrafts((current) => ({

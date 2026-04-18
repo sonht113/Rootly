@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -84,9 +85,13 @@ function createNotificationRecord(overrides: Partial<NotificationRow> = {}): Not
 }
 
 function UnreadCountProbe() {
-  notificationsUnreadState = useNotificationsUnreadState();
+  const currentNotificationsUnreadState = useNotificationsUnreadState();
 
-  return <div>{`Unread: ${notificationsUnreadState?.unreadCount ?? 0}`}</div>;
+  useEffect(() => {
+    notificationsUnreadState = currentNotificationsUnreadState;
+  }, [currentNotificationsUnreadState]);
+
+  return <div>{`Unread: ${currentNotificationsUnreadState?.unreadCount ?? 0}`}</div>;
 }
 
 describe("NotificationsInbox", () => {

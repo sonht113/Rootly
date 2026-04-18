@@ -58,6 +58,7 @@ export async function AppShell({ profile, streak, children }: AppShellProps) {
       <main className="min-h-screen">
         <div className="mx-auto flex min-h-screen max-w-4/5 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
           <NotificationsUnreadProvider
+            key={`${profile.auth_user_id}:${unreadNotificationCount}`}
             initialUnreadCount={unreadNotificationCount}
           >
             <NotificationsRealtimeBridge userId={profile.auth_user_id} />
