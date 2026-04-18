@@ -1,70 +1,83 @@
 # Git Conventions
 
-## Branch naming
+This document defines the Git naming rules that the project should follow before pushing code.
 
-Format:
+## Branch Format
+
+Use this format for every branch:
 
 ```text
-(feat|fix|refactor|chore|docs)/nuicoder/[ten-ngan-gon-tong-quat]
+[feat|fix|refactor|chore|docs]/member-name/title
 ```
 
 Rules:
 
-- Chỉ dùng một trong các prefix: `feat`, `fix`, `refactor`, `chore`, `docs`
-- Phần giữa luôn là `nuicoder`
-- Phần cuối viết ngắn gọn, tổng quát, dùng chữ thường và ngăn cách bằng dấu `-`
-- Không dùng khoảng trắng, ký tự đặc biệt, hoặc mô tả quá chi tiết
+- The first segment must be exactly one of: `feat`, `fix`, `refactor`, `chore`, `docs`
+- The `member-name` segment must be the contributor name in lowercase kebab-case
+- The `title` segment must be a short lowercase kebab-case summary of the work
+- Do not use spaces, uppercase letters, underscores, or special characters
+- Keep the branch title short and focused on one scope
 
 Valid examples:
 
-- `feat/nuicoder/calendar-completion-status`
-- `fix/nuicoder/library-vietnamese-encoding`
-- `refactor/nuicoder/quiz-submit-flow`
-- `chore/nuicoder/update-test-setup`
-- `docs/nuicoder/git-conventions`
+- `feat/minh-nguyen/class-lesson-import`
+- `fix/anh-tran/vietnamese-encoding`
+- `refactor/linh-pham/notification-realtime-flow`
+- `chore/tuan-le/update-test-config`
+- `docs/ha-do/git-conventions`
 
 Invalid examples:
 
-- `feature/nuicoder/calendar-completion-status`
-- `fix/calendar-completion-status`
-- `feat/nuicoder/calendar completion status`
-- `feat/nuicoder/fix-calendar-and-review-and-quiz-and-library`
+- `feature/minh-nguyen/class-lesson-import`
+- `feat/class-lesson-import`
+- `feat/minh_nguyen/class-lesson-import`
+- `feat/minh-nguyen/ClassLessonImport`
+- `feat/minh-nguyen/class lesson import`
 
-## Commit message
+## Commit Format
 
-Format:
+Use this format for every commit:
 
 ```text
-(feat|fix|refactor|chore|docs): [message commit]
+[feat|fix|refactor|chore|docs]: [message-commit]
 ```
 
 Rules:
 
-- Chỉ dùng một trong các prefix: `feat`, `fix`, `refactor`, `chore`, `docs`
-- Sau prefix dùng dấu `:`
-- Nội dung commit ngắn gọn, mô tả đúng thay đổi chính
-- Tổng độ dài toàn bộ commit message không quá `100` ký tự
-- Không thêm nhiều ý không liên quan trong cùng một commit message
+- The prefix must be exactly one of: `feat`, `fix`, `refactor`, `chore`, `docs`
+- Use exactly one colon after the prefix, followed by one space
+- The commit message must be short, clear, and describe the main change
+- Keep one commit focused on one logical change
+- Avoid overly long commit messages and avoid mixing unrelated changes in the same commit
 
 Valid examples:
 
-- `feat: update calendar completion states after quiz submit`
-- `fix: resolve vietnamese encoding in library detail page`
-- `refactor: simplify study plan completion flow`
-- `chore: update vitest coverage for calendar flow`
-- `docs: add git branch and commit naming conventions`
+- `feat: add class lesson csv import flow`
+- `fix: resolve vietnamese encoding in lesson content`
+- `refactor: simplify notification realtime sync`
+- `chore: update test coverage for admin users`
+- `docs: add git branch and commit rules`
 
 Invalid examples:
 
-- `feature: update calendar completion states`
-- `fix update calendar completion states`
-- `feat : update calendar completion states`
-- `feat: update calendar completion states after quiz submit and sync review items for weekly calendar page`
+- `feature: add class lesson csv import flow`
+- `feat add class lesson csv import flow`
+- `feat : add class lesson csv import flow`
+- `feat:add class lesson csv import flow`
 
-## Prefix guide
+## Prefix Meaning
 
-- `feat`: thêm tính năng mới
-- `fix`: sửa lỗi
-- `refactor`: đổi cấu trúc code nhưng không đổi behavior chính
-- `chore`: việc kỹ thuật, config, tooling, test setup
-- `docs`: cập nhật tài liệu
+- `feat`: add a new feature
+- `fix`: fix a bug
+- `refactor`: improve structure without changing the main behavior
+- `chore`: tooling, config, maintenance, or non-feature technical work
+- `docs`: documentation updates only
+
+## Push Checklist
+
+Before pushing code:
+
+- Make sure the branch name matches the required branch format
+- Make sure every commit message matches the required commit format
+- Keep branch scope and commit scope aligned
+- Confirm there are no unrelated changes in the push
