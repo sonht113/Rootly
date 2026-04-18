@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClassExamsPanel } from "@/features/classes/components/class-exams-panel";
+import { StudentClassLessonsPanel } from "@/features/classes/components/class-lessons-panel";
 import { ClassSuggestionsPanel } from "@/features/classes/components/class-suggestions-panel";
 import { getStudentClassDetailView } from "@/server/services/classes-service";
 
@@ -18,7 +19,7 @@ export default async function StudentClassDetailPage({
     notFound();
   }
 
-  const { classItem, assignments, exams } = view;
+  const { classItem, assignments, exams, lessons } = view;
 
   return (
     <div className="space-y-8">
@@ -64,6 +65,8 @@ export default async function StudentClassDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <StudentClassLessonsPanel lessons={lessons} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <ClassSuggestionsPanel

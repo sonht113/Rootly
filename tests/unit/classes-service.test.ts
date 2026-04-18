@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  mockedGetClassLessons,
   mockedGetCurrentStudentClass,
   mockedGetCurrentStudentClasses,
   mockedGetCurrentUserClassSuggestions,
   mockedGetAccessibleExamsForCurrentUser,
 } = vi.hoisted(() => ({
+  mockedGetClassLessons: vi.fn(),
   mockedGetCurrentStudentClass: vi.fn(),
   mockedGetCurrentStudentClasses: vi.fn(),
   mockedGetCurrentUserClassSuggestions: vi.fn(),
@@ -13,6 +15,7 @@ const {
 }));
 
 vi.mock("@/server/repositories/classes-repository", () => ({
+  getClassLessons: mockedGetClassLessons,
   getCurrentStudentClass: mockedGetCurrentStudentClass,
   getCurrentStudentClasses: mockedGetCurrentStudentClasses,
   getCurrentUserClassSuggestions: mockedGetCurrentUserClassSuggestions,
@@ -26,6 +29,7 @@ import { getStudentClassDetailView, getStudentClassesOverview } from "@/server/s
 
 describe("classes-service", () => {
   beforeEach(() => {
+    mockedGetClassLessons.mockReset();
     mockedGetCurrentStudentClass.mockReset();
     mockedGetCurrentStudentClasses.mockReset();
     mockedGetCurrentUserClassSuggestions.mockReset();
@@ -99,6 +103,7 @@ describe("classes-service", () => {
         user_attempt: null,
       },
     ]);
+    mockedGetClassLessons.mockResolvedValue([]);
 
     await expect(getStudentClassesOverview()).resolves.toEqual([
       {
@@ -179,6 +184,29 @@ describe("classes-service", () => {
         user_attempt: null,
       },
     ]);
+    mockedGetClassLessons.mockResolvedValue([
+      {
+        id: "lesson-1",
+        classId: "class-1",
+        title: "Buoi 1",
+        description: "Tu vung co ban",
+        vocabularyItemCount: 2,
+        createdAt: "2026-04-18T08:00:00.000Z",
+        updatedAt: "2026-04-18T09:00:00.000Z",
+        vocabularyItems: [
+          {
+            id: "item-1",
+            lessonId: "lesson-1",
+            word: "classroom",
+            meaning: "phong hoc",
+            synonyms: ["schoolroom"],
+            exampleSentences: ["The classroom is ready."],
+            createdAt: "2026-04-18T08:00:00.000Z",
+            updatedAt: "2026-04-18T08:00:00.000Z",
+          },
+        ],
+      },
+    ]);
 
     const result = await getStudentClassDetailView("class-1");
 
@@ -224,6 +252,29 @@ describe("classes-service", () => {
           user_attempt: null,
         },
       ],
+      lessons: [
+        {
+          id: "lesson-1",
+          classId: "class-1",
+          title: "Buoi 1",
+          description: "Tu vung co ban",
+          vocabularyItemCount: 2,
+          createdAt: "2026-04-18T08:00:00.000Z",
+          updatedAt: "2026-04-18T09:00:00.000Z",
+          vocabularyItems: [
+            {
+              id: "item-1",
+              lessonId: "lesson-1",
+              word: "classroom",
+              meaning: "phong hoc",
+              synonyms: ["schoolroom"],
+              exampleSentences: ["The classroom is ready."],
+              createdAt: "2026-04-18T08:00:00.000Z",
+              updatedAt: "2026-04-18T08:00:00.000Z",
+            },
+          ],
+        },
+      ],
     });
   });
 
@@ -231,6 +282,7 @@ describe("classes-service", () => {
     mockedGetCurrentStudentClass.mockResolvedValue(null);
     mockedGetCurrentUserClassSuggestions.mockResolvedValue([]);
     mockedGetAccessibleExamsForCurrentUser.mockResolvedValue([]);
+    mockedGetClassLessons.mockResolvedValue([]);
 
     await expect(getStudentClassDetailView("class-1")).resolves.toBeNull();
   });
