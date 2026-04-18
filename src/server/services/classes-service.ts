@@ -1,8 +1,10 @@
 import { getExamAvailabilityState } from "@/lib/utils/exams";
 import {
+  getClassLessons,
   getCurrentStudentClass,
   getCurrentStudentClasses,
   getCurrentUserClassSuggestions,
+  type ClassLesson,
   type CurrentStudentClass,
   type CurrentUserClassSuggestion,
 } from "@/server/repositories/classes-repository";
@@ -21,6 +23,7 @@ export interface StudentClassDetailView {
   classItem: StudentClassSummary;
   assignments: CurrentUserClassSuggestion[];
   exams: StudentClassExam[];
+  lessons: ClassLesson[];
 }
 
 function isClassScopedExam(exam: StudentClassExam): exam is StudentClassExam & { class_id: string } {
@@ -77,10 +80,11 @@ export async function getStudentClassesOverview() {
 }
 
 export async function getStudentClassDetailView(classId: string): Promise<StudentClassDetailView | null> {
-  const [classItem, assignments, exams] = await Promise.all([
+  const [classItem, assignments, exams, lessons] = await Promise.all([
     getCurrentStudentClass(classId),
     getCurrentUserClassSuggestions(),
     getAccessibleExamsForCurrentUser(),
+    getClassLessons(classId),
   ]);
 
   if (!classItem) {
@@ -94,5 +98,6 @@ export async function getStudentClassDetailView(classId: string): Promise<Studen
     classItem: buildStudentClassSummary(classItem, classAssignments, classExams),
     assignments: classAssignments,
     exams: classExams,
+    lessons,
   };
 }

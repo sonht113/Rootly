@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ClassExamsPanel } from "@/features/classes/components/class-exams-panel";
+import { TeacherClassLessonsPanel } from "@/features/classes/components/class-lessons-panel";
 import { ClassMembersPanel, ClassSuggestionsPanel } from "@/features/classes/components/class-detail-panels";
 import { RankingRow } from "@/features/ranking/components/ranking-row";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { getRoleExamDetailPath, getRoleExamsPath } from "@/lib/navigation/role-routes";
-import { getClassDetail } from "@/server/repositories/classes-repository";
+import { getClassDetail, getClassLessons } from "@/server/repositories/classes-repository";
 import { getManageableExams } from "@/server/repositories/exams-repository";
 import { getLeaderboard } from "@/server/repositories/ranking-repository";
 import { getPublishedRootWords } from "@/server/repositories/root-words-repository";
@@ -20,8 +21,9 @@ export default async function TeacherClassDetailPage({
   params: Promise<{ classId: string }>;
 }) {
   const { classId } = await params;
-  const [{ classData, summary }, rootWords, leaderboard, exams, profile] = await Promise.all([
+  const [{ classData, summary }, lessons, rootWords, leaderboard, exams, profile] = await Promise.all([
     getClassDetail(classId),
+    getClassLessons(classId),
     getPublishedRootWords(),
     getLeaderboard({
       period: "week",
@@ -91,6 +93,8 @@ export default async function TeacherClassDetailPage({
           suggestions={classData.class_root_suggestions ?? []}
         />
       </div>
+
+      <TeacherClassLessonsPanel classId={classId} lessons={lessons} />
 
       <ClassExamsPanel
         title="Kỳ thi của lớp"

@@ -37,6 +37,28 @@ export interface CurrentStudentClass {
   memberCount: number;
 }
 
+export interface ClassLessonVocabularyItem {
+  id: string;
+  lessonId: string;
+  word: string;
+  meaning: string;
+  synonyms: string[];
+  exampleSentences: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClassLesson {
+  id: string;
+  classId: string;
+  title: string;
+  description: string | null;
+  vocabularyItemCount: number;
+  createdAt: string;
+  updatedAt: string;
+  vocabularyItems: ClassLessonVocabularyItem[];
+}
+
 type ClassCountRelation =
   | {
       id: string;
@@ -87,6 +109,28 @@ function getSuggestionPlanStatus(source: UserRootPlanSource) {
   return source === "teacher_suggested" ? "accepted" : "scheduled";
 }
 
+function mapClassLessonVocabularyItem(item: {
+  id: string;
+  lesson_id: string;
+  word: string;
+  meaning: string;
+  synonyms: string[] | null;
+  example_sentences: string[] | null;
+  created_at: string;
+  updated_at: string;
+}): ClassLessonVocabularyItem {
+  return {
+    id: item.id,
+    lessonId: item.lesson_id,
+    word: item.word,
+    meaning: item.meaning,
+    synonyms: item.synonyms ?? [],
+    exampleSentences: item.example_sentences ?? [],
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  };
+}
+
 async function assertClassManagementAccess(classId: string) {
   const supabase = await createServerSupabaseClient();
   const { data: managedClass, error } = await supabase.from("classes").select("id").eq("id", classId).maybeSingle();
@@ -129,6 +173,139 @@ export async function createTeacherClass(name: string, description?: string | nu
   if (error) {
     unwrapSupabaseError(error, "Không thể tạo lớp học");
   }
+}
+
+export async function createClassLesson(classId: string, title: string, description?: string | null) {
+  const supabase = await assertClassManagementAccess(classId);
+  const { error } = await supabase.from("class_lessons").insert({
+    class_id: classId,
+    title,
+    description: description ?? null,
+  });
+
+  if (error) {
+    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ táº¡o buá»•i há»c");
+  }
+}
+
+export async function deleteClassLesson(classId: string, lessonId: string) {
+  const supabase = await assertClassManagementAccess(classId);
+  const { error } = await supabase.from("class_lessons").delete().eq("id", lessonId).eq("class_id", classId);
+
+  if (error) {
+    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ xÃ³a buá»•i há»c");
+  }
+}
+
+export async function replaceClassLessonVocabulary(
+  classId: string,
+  lessonId: string,
+  items: Array<{
+    word: string;
+    meaning: string;
+    synonyms: string[];
+    exampleSentences: string[];
+  }>,
+) {
+  const supabase = await assertClassManagementAccess(classId);
+  const { data: lesson, error: lessonError } = await supabase
+    .from("class_lessons")
+    .select("id")
+    .eq("id", lessonId)
+    .eq("class_id", classId)
+    .maybeSingle();
+
+  if (lessonError) {
+    unwrapSupabaseError(lessonError, "KhÃ´ng thá»ƒ xÃ¡c minh buá»•i há»c cáº§n cáº­p nháº­t");
+  }
+
+  if (!lesson) {
+    throw new Error("KhÃ´ng tÃ¬m tháº¥y buá»•i há»c thuá»™c lá»›p hiá»‡n táº¡i.");
+  }
+
+  const payload = items.map((item) => ({
+    word: item.word,
+    meaning: item.meaning,
+    synonyms: item.synonyms,
+    example_sentences: item.exampleSentences,
+  }));
+
+  const { data, error } = await supabase.rpc("replace_class_lesson_vocabulary", {
+    p_lesson_id: lessonId,
+    p_items: payload,
+  });
+
+  if (error) {
+    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ cáº­p nháº­t tá»« vá»±ng cho buá»•i há»c");
+  }
+
+  return Number(data ?? 0);
+}
+
+export async function getClassLessons(classId: string): Promise<ClassLesson[]> {
+  const supabase = await createServerSupabaseClient();
+  const { data: lessons, error: lessonsError } = await supabase
+    .from("class_lessons")
+    .select("id, class_id, title, description, vocabulary_item_count, created_at, updated_at")
+    .eq("class_id", classId)
+    .order("created_at", { ascending: false });
+
+  if (lessonsError) {
+    unwrapSupabaseError(lessonsError, "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch buá»•i há»c");
+  }
+
+  const normalizedLessons = (lessons ?? []) as Array<{
+    id: string;
+    class_id: string;
+    title: string;
+    description: string | null;
+    vocabulary_item_count: number;
+    created_at: string;
+    updated_at: string;
+  }>;
+
+  if (normalizedLessons.length === 0) {
+    return [];
+  }
+
+  const lessonIds = normalizedLessons.map((lesson) => lesson.id);
+  const { data: vocabularyItems, error: vocabularyError } = await supabase
+    .from("class_lesson_vocab_items")
+    .select("id, lesson_id, word, meaning, synonyms, example_sentences, created_at, updated_at")
+    .in("lesson_id", lessonIds)
+    .order("created_at", { ascending: true });
+
+  if (vocabularyError) {
+    unwrapSupabaseError(vocabularyError, "KhÃ´ng thá»ƒ táº£i tá»« vá»±ng cá»§a buá»•i há»c");
+  }
+
+  const vocabularyByLessonId = new Map<string, ClassLessonVocabularyItem[]>();
+
+  for (const item of ((vocabularyItems ?? []) as Array<{
+    id: string;
+    lesson_id: string;
+    word: string;
+    meaning: string;
+    synonyms: string[] | null;
+    example_sentences: string[] | null;
+    created_at: string;
+    updated_at: string;
+  }>)) {
+    const lessonVocabularyItems = vocabularyByLessonId.get(item.lesson_id) ?? [];
+    lessonVocabularyItems.push(mapClassLessonVocabularyItem(item));
+    vocabularyByLessonId.set(item.lesson_id, lessonVocabularyItems);
+  }
+
+  return normalizedLessons.map((lesson) => ({
+    id: lesson.id,
+    classId: lesson.class_id,
+    title: lesson.title,
+    description: lesson.description,
+    vocabularyItemCount: lesson.vocabulary_item_count ?? 0,
+    createdAt: lesson.created_at,
+    updatedAt: lesson.updated_at,
+    vocabularyItems: vocabularyByLessonId.get(lesson.id) ?? [],
+  }));
 }
 
 export async function getClassDetail(classId: string) {
