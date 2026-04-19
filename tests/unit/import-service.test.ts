@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseImportFile } from "@/server/services/import-service";
@@ -43,9 +45,7 @@ describe("import service", () => {
     expect(result.invalid).toHaveLength(0);
     expect(result.valid[0]?.meaning).toBe("mang; vận chuyển");
     expect(result.valid[0]?.words[0]?.meaning_vi).toBe("vận chuyển");
-    expect(result.valid[0]?.words[0]?.example_sentences[0]?.vietnamese_sentence).toBe(
-      "Chúng tôi vận chuyển trái cây tươi mỗi sáng.",
-    );
+    expect(result.valid[0]?.words[0]?.example_sentences[0]?.vietnamese_sentence).toBe("Chúng tôi vận chuyển trái cây tươi mỗi sáng.");
   });
 
   it("parses roots CSV imports with UTF-8 Vietnamese and pipe-separated word lists", async () => {
@@ -65,5 +65,18 @@ describe("import service", () => {
     expect(result.valid[0]?.words[0]?.word).toBe("credible");
     expect(result.valid[0]?.words[0]?.meaning_vi).toBe("tin; tín nhiệm");
     expect(result.valid[0]?.words[0]?.example_sentences[0]?.vietnamese_sentence).toBe("Nguồn này có vẻ đáng tin.");
+  });
+
+  it("parses the full roots-only template without validation errors", async () => {
+    const templatePath = path.resolve(process.cwd(), "public/templates/root-words-full.csv");
+    const csv = readFileSync(templatePath, "utf8");
+    const file = new File([csv], "root-words-full.csv", { type: "text/csv" });
+
+    const result = await parseImportFile(file, "roots");
+
+    expect(result.invalid).toHaveLength(0);
+    expect(result.valid).toHaveLength(60);
+    expect(result.valid[0]?.words.length).toBeGreaterThanOrEqual(5);
+    expect(result.valid.at(-1)?.root).toBe("al");
   });
 });

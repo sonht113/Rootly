@@ -19,12 +19,14 @@ export async function saveRootWordAction(input: unknown) {
   const parsed = rootWordSchema.parse(input);
   await upsertRootWord(parsed, user.id);
   revalidatePath("/admin/root-words");
+  revalidatePath("/admin/roots");
   revalidatePath("/library");
 }
 
 export async function deleteRootWordAction(rootWordId: string) {
   await deleteRootWord(rootWordId);
   revalidatePath("/admin/root-words");
+  revalidatePath("/admin/roots");
   revalidatePath("/library");
 }
 
@@ -35,5 +37,6 @@ export async function setTodayRecommendedRootWordAction(rootWordId: string) {
   await setTodayDailyRootRecommendation(parsedRootWordId, profile.auth_user_id);
 
   revalidatePath("/admin/root-words");
+  revalidatePath("/admin/roots");
   revalidatePath("/today");
 }

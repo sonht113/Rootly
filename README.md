@@ -244,6 +244,7 @@ Important caveat:
   - `public/templates/root-words.csv`
   - `public/templates/root-words.json`
   - `public/templates/roots-import-template.csv`
+  - `public/templates/root-words-full.csv` (roots-only dataset with 60 common roots, prefixes, and suffixes)
 
 ### Root-word quizzes
 

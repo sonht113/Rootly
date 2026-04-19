@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   const result = await importRootWordBatches(roots, profile.auth_user_id);
 
   revalidatePath("/admin/root-words");
+  revalidatePath("/admin/roots");
   revalidatePath("/library");
   revalidatePath("/roots");
 

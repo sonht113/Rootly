@@ -23,15 +23,22 @@ vi.mock("@/features/root-words/components/root-word-detail-sections", () => ({
   RootWordDetailSections: ({
     rootWord,
     summaryAction,
+    completionTracker,
   }: {
     rootWord: { root: string };
     summaryAction?: React.ReactNode;
+    completionTracker?: React.ReactNode;
   }) => (
     <div>
       <div>{rootWord.root}</div>
       {summaryAction}
+      {completionTracker}
     </div>
   ),
+}));
+
+vi.mock("@/features/root-words/components/root-word-detail-streak-tracker", () => ({
+  RootWordDetailStreakTracker: () => <div>streak-tracker</div>,
 }));
 
 vi.mock("@/features/root-words/components/root-word-quiz-actions", () => ({
@@ -88,7 +95,7 @@ describe("student root artifact page", () => {
     mockedGetRootWordReviewContext.mockResolvedValue(null);
   });
 
-  it("renders the artifact detail without recording a study session", async () => {
+  it("renders the artifact detail with the streak tracker", async () => {
     mockedGetCurrentProfile.mockResolvedValue({
       role: "student",
     });
@@ -97,5 +104,6 @@ describe("student root artifact page", () => {
 
     expect(screen.getAllByText("spect")).not.toHaveLength(0);
     expect(screen.getByText("quiz-actions")).toBeInTheDocument();
+    expect(screen.getByText("streak-tracker")).toBeInTheDocument();
   });
 });

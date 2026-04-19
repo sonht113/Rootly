@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { RootWordDetailSections } from "@/features/root-words/components/root-word-detail-sections";
+import { RootWordDetailStreakTracker } from "@/features/root-words/components/root-word-detail-streak-tracker";
 import { RootWordQuizActions } from "@/features/root-words/components/root-word-quiz-actions";
 import { RootWordReviewActions } from "@/features/root-words/components/root-word-review-actions";
 import { SchedulePlanDialog } from "@/features/study-plans/components/schedule-plan-dialog";
@@ -55,6 +56,7 @@ export default async function RootWordDetailPage({
 
       <RootWordDetailSections
         rootWord={rootWord}
+        completionTracker={<RootWordDetailStreakTracker rootWordId={rootWord.id} />}
         summaryAction={
           hasSummaryAction ? (
             <div className="space-y-3">

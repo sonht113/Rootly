@@ -20,7 +20,22 @@ vi.mock("@/components/shared/page-header", () => ({
 }));
 
 vi.mock("@/features/root-words/components/root-word-detail-sections", () => ({
-  RootWordDetailSections: ({ rootWord }: { rootWord: { root: string } }) => <div>{rootWord.root}</div>,
+  RootWordDetailSections: ({
+    rootWord,
+    completionTracker,
+  }: {
+    rootWord: { root: string };
+    completionTracker?: React.ReactNode;
+  }) => (
+    <div>
+      <div>{rootWord.root}</div>
+      {completionTracker}
+    </div>
+  ),
+}));
+
+vi.mock("@/features/root-words/components/root-word-detail-streak-tracker", () => ({
+  RootWordDetailStreakTracker: () => <div>streak-tracker</div>,
 }));
 
 vi.mock("@/features/root-words/components/root-word-quiz-actions", () => ({
@@ -81,7 +96,7 @@ describe("student library root detail page", () => {
     mockedGetRootWordReviewContext.mockResolvedValue(null);
   });
 
-  it("renders detail for student visitors without tracking a study session", async () => {
+  it("renders detail for student visitors with the streak tracker", async () => {
     mockedGetCurrentProfile.mockResolvedValue({
       role: "student",
     });
@@ -89,9 +104,10 @@ describe("student library root detail page", () => {
     render(await RootWordDetailPage({ params: Promise.resolve({ rootId: "root-1" }) }));
 
     expect(screen.getByRole("heading", { name: "spect" })).toBeInTheDocument();
+    expect(screen.getByText("streak-tracker")).toBeInTheDocument();
   });
 
-  it("renders detail for non-student visitors without tracking a study session", async () => {
+  it("renders detail for non-student visitors with the streak tracker", async () => {
     mockedGetCurrentProfile.mockResolvedValue({
       role: "admin",
     });
@@ -99,5 +115,6 @@ describe("student library root detail page", () => {
     render(await RootWordDetailPage({ params: Promise.resolve({ rootId: "root-1" }) }));
 
     expect(screen.getByRole("heading", { name: "spect" })).toBeInTheDocument();
+    expect(screen.getByText("streak-tracker")).toBeInTheDocument();
   });
 });

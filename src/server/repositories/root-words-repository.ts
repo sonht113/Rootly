@@ -49,6 +49,14 @@ export interface PaginatedLibraryRootWords {
   pageSize: number;
 }
 
+export interface PaginatedAdminRootWords {
+  items: Array<RootWordRow & { words: Array<{ count: number }> }>;
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
 interface LibraryRootWordFilters {
   query?: string;
   level?: string;
@@ -56,6 +64,16 @@ interface LibraryRootWordFilters {
 }
 
 interface PaginatedLibraryRootWordFilters extends LibraryRootWordFilters {
+  page?: number;
+  pageSize?: number;
+}
+
+interface AdminRootWordFilters {
+  query?: string;
+  published?: string;
+}
+
+interface PaginatedAdminRootWordFilters extends AdminRootWordFilters {
   page?: number;
   pageSize?: number;
 }
@@ -144,6 +162,51 @@ function buildLibraryRootWordsCountQuery(
 
   if (filters?.level) {
     query = query.eq("level", filters.level);
+  }
+
+  return query;
+}
+
+function buildAdminRootWordsDataQuery(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  filters?: AdminRootWordFilters,
+) {
+  let query = supabase
+    .from("root_words")
+    .select("*, words(count)")
+    .order("updated_at", { ascending: false });
+
+  if (filters?.query) {
+    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%`);
+  }
+
+  if (filters?.published === "published") {
+    query = query.eq("is_published", true);
+  }
+
+  if (filters?.published === "draft") {
+    query = query.eq("is_published", false);
+  }
+
+  return query;
+}
+
+function buildAdminRootWordsCountQuery(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  filters?: AdminRootWordFilters,
+) {
+  let query = supabase.from("root_words").select("id", { count: "exact", head: true });
+
+  if (filters?.query) {
+    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%`);
+  }
+
+  if (filters?.published === "published") {
+    query = query.eq("is_published", true);
+  }
+
+  if (filters?.published === "draft") {
+    query = query.eq("is_published", false);
   }
 
   return query;
@@ -405,22 +468,7 @@ export async function getRootWordDetail(rootId: string) {
 
 export async function getAdminRootWords(filters?: { query?: string; published?: string }) {
   const supabase = await createServerSupabaseClient();
-  let query = supabase
-    .from("root_words")
-    .select("*, words(count)")
-    .order("updated_at", { ascending: false });
-
-  if (filters?.query) {
-    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%`);
-  }
-
-  if (filters?.published === "published") {
-    query = query.eq("is_published", true);
-  }
-
-  if (filters?.published === "draft") {
-    query = query.eq("is_published", false);
-  }
+  const query = buildAdminRootWordsDataQuery(supabase, filters);
 
   const { data, error } = await query;
   if (error) {
@@ -428,6 +476,49 @@ export async function getAdminRootWords(filters?: { query?: string; published?: 
   }
 
   return (data ?? []) as Array<RootWordRow & { words: Array<{ count: number }> }>;
+}
+
+export async function getPaginatedAdminRootWords(
+  filters?: PaginatedAdminRootWordFilters,
+): Promise<PaginatedAdminRootWords> {
+  const supabase = await createServerSupabaseClient();
+  const requestedPage = getNormalizedPositiveInteger(filters?.page, 1);
+  const pageSize = getNormalizedPositiveInteger(filters?.pageSize, 10);
+  const { count, error: countError } = await buildAdminRootWordsCountQuery(supabase, filters);
+
+  if (countError) {
+    unwrapSupabaseError(countError, "Không thể đếm số lượng root word cần quản lý");
+  }
+
+  const totalCount = Number(count ?? 0);
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 1;
+  const currentPage = totalCount > 0 ? Math.min(requestedPage, totalPages) : 1;
+
+  if (totalCount === 0) {
+    return {
+      items: [],
+      totalCount,
+      totalPages,
+      currentPage,
+      pageSize,
+    };
+  }
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data, error } = await buildAdminRootWordsDataQuery(supabase, filters).range(from, to);
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tải danh sách root word theo trang cho admin");
+  }
+
+  return {
+    items: (data ?? []) as Array<RootWordRow & { words: Array<{ count: number }> }>,
+    totalCount,
+    totalPages,
+    currentPage,
+    pageSize,
+  };
 }
 
 export async function upsertRootWord(input: RootWordInput, createdBy: string) {

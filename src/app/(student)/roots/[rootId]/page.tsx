@@ -1,5 +1,6 @@
 import { RootArtifactHero } from "@/features/root-words/components/root-artifact-hero";
 import { RootWordDetailSections } from "@/features/root-words/components/root-word-detail-sections";
+import { RootWordDetailStreakTracker } from "@/features/root-words/components/root-word-detail-streak-tracker";
 import { RootWordQuizActions } from "@/features/root-words/components/root-word-quiz-actions";
 import { RootWordReviewActions } from "@/features/root-words/components/root-word-review-actions";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -34,6 +35,7 @@ export default async function RootArtifactPage({
       <RootArtifactHero rootWord={rootWord} nextReviewText={snapshot.nextReviewText} hasPlan={snapshot.hasPlan} />
       <RootWordDetailSections
         rootWord={rootWord}
+        completionTracker={<RootWordDetailStreakTracker rootWordId={rootWord.id} />}
         summaryAction={
           hasSummaryAction ? (
             <div className="space-y-3">

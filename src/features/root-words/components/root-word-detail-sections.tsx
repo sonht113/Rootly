@@ -8,9 +8,10 @@ import type { RootWordDetail } from "@/types/domain";
 interface RootWordDetailSectionsProps {
   rootWord: RootWordDetail;
   summaryAction?: ReactNode;
+  completionTracker?: ReactNode;
 }
 
-export function RootWordDetailSections({ rootWord, summaryAction }: RootWordDetailSectionsProps) {
+export function RootWordDetailSections({ rootWord, summaryAction, completionTracker }: RootWordDetailSectionsProps) {
   return (
     <>
       <Card>
@@ -75,6 +76,7 @@ export function RootWordDetailSections({ rootWord, summaryAction }: RootWordDeta
             </CardContent>
           </Card>
         ))}
+        {completionTracker}
       </div>
     </>
   );

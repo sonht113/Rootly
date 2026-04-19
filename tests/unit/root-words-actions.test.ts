@@ -57,6 +57,7 @@ describe("setTodayRecommendedRootWordAction", () => {
       "admin-1",
     );
     expect(mockedRevalidatePath).toHaveBeenCalledWith("/admin/root-words");
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/admin/roots");
     expect(mockedRevalidatePath).toHaveBeenCalledWith("/today");
   });
 });
