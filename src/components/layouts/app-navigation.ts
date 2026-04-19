@@ -104,7 +104,7 @@ export const navigationByRole: Record<AppRole, AppNavigationItem[]> = {
     { href: getRoleRankingPath("teacher"), label: "Xếp hạng", icon: Trophy },
   ],
   admin: [
-    { href: getRoleHomePath("admin"), label: "Nội dung", icon: Shield },
+    { href: getRoleHomePath("admin"), label: "Quản lý root word", icon: Shield },
     { href: getAdminUsersPath(), label: "Người dùng", icon: Users },
     { href: getRoleNotificationsPath("admin"), label: "Thông báo", icon: Bell },
     {
