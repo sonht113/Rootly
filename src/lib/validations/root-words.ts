@@ -28,7 +28,11 @@ export const rootWordSchema = z.object({
   words: z.array(wordSchema).min(1),
 });
 
+export const rootWordDetailViewSchema = z.object({
+  rootWordId: z.string().uuid(),
+});
+
 export type RootWordInput = z.infer<typeof rootWordSchema>;
 export type WordInput = z.infer<typeof wordSchema>;
 export type ExampleSentenceInput = z.infer<typeof exampleSentenceSchema>;
-
+export type RootWordDetailViewInput = z.infer<typeof rootWordDetailViewSchema>;
