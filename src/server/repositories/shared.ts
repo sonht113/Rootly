@@ -37,7 +37,7 @@ export function formatSupabaseErrorMessage(error: SupabaseErrorLike | null, fall
   }
 
   if (isTransientSupabaseError(error)) {
-    return `${fallbackMessage}. Supabase tam thoi gap su co may chu, vui long thu lai sau it phut.`;
+    return `${fallbackMessage}. Supabase tạm thời gặp sự cố máy chủ, vui lòng thử lại sau ít phút.`;
   }
 
   return error.message;

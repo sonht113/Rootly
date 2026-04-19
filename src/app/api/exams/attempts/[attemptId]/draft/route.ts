@@ -11,14 +11,14 @@ export async function POST(
 ) {
   const profile = await getCurrentProfile();
   if (!profile) {
-    return NextResponse.json({ message: "Ban can dang nhap de luu nhap bai thi." }, { status: 401 });
+    return NextResponse.json({ message: "Bạn cần đăng nhập để lưu nháp bài thi." }, { status: 401 });
   }
 
   const payload = examAttemptDraftSaveSchema.safeParse(await request.json());
   if (!payload.success) {
     return NextResponse.json(
       {
-        message: payload.error.issues[0]?.message ?? "Du lieu nhap bai thi chua hop le.",
+        message: payload.error.issues[0]?.message ?? "Dữ liệu nháp bài thi chưa hợp lệ.",
       },
       { status: 400 },
     );
@@ -36,7 +36,7 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Khong the luu nhap bai thi.";
+    const message = error instanceof Error ? error.message : "Không thể lưu nháp bài thi.";
 
     return NextResponse.json(
       {
@@ -48,11 +48,11 @@ export async function POST(
 }
 
 function getExamAttemptErrorStatus(message: string) {
-  if (message.includes("Du lieu") || message.includes("Danh sach") || message.includes("khong thuoc")) {
+  if (message.includes("Dữ liệu") || message.includes("Danh sách") || message.includes("không thuộc")) {
     return 400;
   }
 
-  if (message.includes("dang mo") || message.includes("de luu nhap")) {
+  if (message.includes("đang mở") || message.includes("để lưu nháp")) {
     return 409;
   }
 

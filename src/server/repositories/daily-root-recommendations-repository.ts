@@ -62,7 +62,7 @@ export async function getDailyRootRecommendationForDate(date: string) {
     .maybeSingle();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai root tu de xuat theo ngay");
+    unwrapSupabaseError(error, "Không thể tải root từ đề xuất theo ngày");
   }
 
   return mapDailyRootRecommendation((data ?? null) as DailyRootRecommendationRecord | null);
@@ -81,11 +81,11 @@ export async function setTodayDailyRootRecommendation(rootWordId: string, select
     .maybeSingle();
 
   if (rootWordError) {
-    unwrapSupabaseError(rootWordError, "Khong the kiem tra root word duoc de xuat");
+    unwrapSupabaseError(rootWordError, "Không thể kiểm tra root word được đề xuất");
   }
 
   if (!rootWord || !rootWord.is_published) {
-    throw new Error("Chi co the de xuat root word da xuat ban.");
+    throw new Error("Chỉ có thể đề xuất root word đã xuất bản.");
   }
 
   const recommendationDate = getVietnamDateString();
@@ -105,7 +105,7 @@ export async function setTodayDailyRootRecommendation(rootWordId: string, select
     .single();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the luu root tu de xuat hom nay");
+    unwrapSupabaseError(error, "Không thể lưu root từ đề xuất hôm nay");
   }
 
   return mapDailyRootRecommendation(data as DailyRootRecommendationRecord);

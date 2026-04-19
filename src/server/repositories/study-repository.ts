@@ -14,7 +14,7 @@ const USER_ROOT_PLAN_UNIQUE_CONSTRAINTS = [
   "user_root_plans_user_id_root_word_id_scheduled_date_key",
 ] as const;
 const PLAN_ALREADY_EXISTS_MESSAGE =
-  "Tu goc nay da co trong lich hoc cua ban. Hay hoan thanh hoac xoa lich cu truoc khi them lai.";
+  "Từ gốc này đã có trong lịch học của bạn. Hãy hoàn thành hoặc xóa lịch cũ trước khi thêm lại.";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
@@ -108,11 +108,11 @@ async function requireCurrentUser(supabase: ServerSupabaseClient) {
   } = await supabase.auth.getUser();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the xac thuc nguoi dung hien tai");
+    unwrapSupabaseError(error, "Không thể xác thực người dùng hiện tại");
   }
 
   if (!user) {
-    throw new Error("Ban can dang nhap de quan ly lich hoc.");
+    throw new Error("Bạn cần đăng nhập để quản lý lịch học.");
   }
 
   return user;
@@ -137,7 +137,7 @@ async function getExistingPlanForRootWord(
   const { data, error } = await query.order("created_at", { ascending: true }).limit(1);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the kiem tra lich hoc hien tai");
+    unwrapSupabaseError(error, "Không thể kiểm tra lịch học hiện tại");
   }
 
   return (data ?? [])[0] ?? null;
@@ -184,7 +184,7 @@ export async function recordRootWordDetailView(rootWordId: string): Promise<Reco
   });
 
   if (error) {
-    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ ghi nháº­n lÆ°á»£t xem chi tiáº¿t tá»« gá»‘c");
+    unwrapSupabaseError(error, "Không thể ghi nhận lượt xem chi tiết từ gốc");
   }
 
   const raw = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};

@@ -37,7 +37,7 @@ export function ExamsList({ exams }: ExamsListProps) {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-[color:var(--muted-foreground)]">
-          Hien chua co ky thi nao mo cho ban. Khi giao vien hoac quan tri vien phat hanh ky thi moi, ban se thay tai day.
+          Hiện chưa có kỳ thi nào mở cho bạn. Khi giáo viên hoặc quản trị viên phát hành kỳ thi mới, bạn sẽ thấy tại đây.
         </CardContent>
       </Card>
     );
@@ -67,24 +67,24 @@ export function ExamsList({ exams }: ExamsListProps) {
 
               <Button asChild>
                 <Link href={`/exams/${exam.id}`}>
-                  {isFinalizedExamAttemptStatus(exam.user_attempt?.status) ? "Xem ket qua" : "Xem chi tiet"}
+                  {isFinalizedExamAttemptStatus(exam.user_attempt?.status) ? "Xem kết quả" : "Xem chi tiết"}
                 </Link>
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-[color:var(--muted-foreground)]">
-                {exam.description ?? "Ky thi dung de danh gia muc do nam vung noi dung da hoc."}
+                {exam.description ?? "Kỳ thi dùng để đánh giá mức độ nắm vững nội dung đã học."}
               </p>
 
               <div className="flex flex-wrap gap-2 text-xs text-[color:var(--muted-foreground)]">
-                <span className="rounded-full bg-[color:var(--muted)] px-3 py-1">{exam.question_count} cau hoi</span>
-                <span className="rounded-full bg-[color:var(--muted)] px-3 py-1">{exam.total_points} diem toi da</span>
+                <span className="rounded-full bg-[color:var(--muted)] px-3 py-1">{exam.question_count} câu hỏi</span>
+                <span className="rounded-full bg-[color:var(--muted)] px-3 py-1">{exam.total_points} điểm tối đa</span>
                 <span className="rounded-full bg-[color:var(--muted)] px-3 py-1">
                   {formatExamWindow(exam.starts_at, exam.ends_at)}
                 </span>
                 {typeof exam.user_attempt?.score === "number" ? (
                   <span className="rounded-full bg-[color:var(--primary-soft)] px-3 py-1 text-[color:var(--primary-strong)]">
-                    Diem gan nhat: {exam.user_attempt.score}%
+                    Điểm gần nhất: {exam.user_attempt.score}%
                   </span>
                 ) : null}
               </div>

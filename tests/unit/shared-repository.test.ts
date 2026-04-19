@@ -25,9 +25,9 @@ describe("shared repository helpers", () => {
 </body>
 </html>`,
         },
-        "Khong the tai danh sach goi y tu lop",
+        "Không thể tải danh sách gợi ý từ lớp",
       ),
-    ).toThrow("Khong the tai danh sach goi y tu lop. Supabase tam thoi gap su co may chu, vui long thu lai sau it phut.");
+    ).toThrow("Không thể tải danh sách gợi ý từ lớp. Supabase tạm thời gặp sự cố máy chủ, vui lòng thử lại sau ít phút.");
   });
 
   it("retries a transient read query once before succeeding", async () => {

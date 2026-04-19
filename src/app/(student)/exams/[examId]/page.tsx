@@ -29,9 +29,9 @@ export default async function ExamDetailPage({
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Ky thi"
+        eyebrow="Kỳ thi"
         title={exam.title}
-        description={exam.description ?? "Xem pham vi, thoi gian mo de va tien do lam bai cua ban."}
+        description={exam.description ?? "Xem phạm vi, thời gian mở đề và tiến độ làm bài của bạn."}
         action={<Badge variant={getExamAvailabilityBadgeVariant(availability)}>{getExamAvailabilityLabel(availability)}</Badge>}
       />
 
@@ -52,14 +52,14 @@ export default async function ExamDetailPage({
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Trang thai ky thi</CardTitle>
+                <CardTitle>Trạng thái kỳ thi</CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-6 text-[color:var(--muted-foreground)]">
                 {availability === "upcoming"
-                  ? "Ky thi chua den thoi diem mo de. Hay quay lai dung khung gio da cong bo."
+                  ? "Kỳ thi chưa đến thời điểm mở đề. Hãy quay lại đúng khung giờ đã công bố."
                   : availability === "closed"
-                    ? "Ky thi nay da dong va hien khong nhan them luot lam moi."
-                    : "Ky thi hien chua san sang de bat dau."}
+                    ? "Kỳ thi này đã đóng và hiện không nhận thêm lượt làm mới."
+                    : "Kỳ thi hiện chưa sẵn sàng để bắt đầu."}
               </CardContent>
             </Card>
           )}
@@ -67,16 +67,16 @@ export default async function ExamDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Thong tin nhanh</CardTitle>
+            <CardTitle>Thông tin nhanh</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-[color:var(--muted-foreground)]">
-            <InfoRow label="Pham vi" value={`${getExamScopeLabel(exam.scope)}${exam.class_name ? ` | ${exam.class_name}` : ""}`} />
-            <InfoRow label="Lich mo de" value={formatExamWindow(exam.starts_at, exam.ends_at)} />
-            <InfoRow label="So cau hoi" value={`${exam.question_count} cau`} />
-            <InfoRow label="Diem toi da" value={`${exam.total_points} diem`} />
-            <InfoRow label="Thoi luong" value={exam.duration_minutes ? `${exam.duration_minutes} phut` : "Khong gioi han"} />
+            <InfoRow label="Phạm vi" value={`${getExamScopeLabel(exam.scope)}${exam.class_name ? ` | ${exam.class_name}` : ""}`} />
+            <InfoRow label="Lịch mở đề" value={formatExamWindow(exam.starts_at, exam.ends_at)} />
+            <InfoRow label="Số câu hỏi" value={`${exam.question_count} câu`} />
+            <InfoRow label="Điểm tối đa" value={`${exam.total_points} điểm`} />
+            <InfoRow label="Thời lượng" value={exam.duration_minutes ? `${exam.duration_minutes} phút` : "Không giới hạn"} />
             <InfoRow
-              label="Han ca nhan"
+              label="Hạn cá nhân"
               value={
                 attempt?.status === "started" && runtime?.deadlineAt
                   ? new Intl.DateTimeFormat("vi-VN", {
@@ -86,10 +86,10 @@ export default async function ExamDetailPage({
                       hour: "2-digit",
                       minute: "2-digit",
                     }).format(new Date(runtime.deadlineAt))
-                  : "Theo lich chung"
+                  : "Theo lịch chung"
               }
             />
-            <InfoRow label="Luot nop hien co" value={`${leaderboard.length} luot`} />
+            <InfoRow label="Lượt nộp hiện có" value={`${leaderboard.length} lượt`} />
           </CardContent>
         </Card>
       </div>

@@ -110,7 +110,7 @@ export async function getQuestionBankItems() {
     .order("updated_at", { ascending: false });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai ngan hang cau hoi.");
+    unwrapSupabaseError(error, "Không thể tải ngân hàng câu hỏi.");
   }
 
   return (data ?? []) as ExamQuestionBankItemRow[];
@@ -135,7 +135,7 @@ export async function createQuestionBankItem(input: ExamQuestionBankItemInput) {
   const { data, error } = await supabase.from("exam_question_bank_items").insert(payload).select("*").single();
 
   if (error || !data) {
-    unwrapSupabaseError(error, "Khong the them cau hoi vao ngan hang.");
+    unwrapSupabaseError(error, "Không thể thêm câu hỏi vào ngân hàng.");
   }
 
   return data as ExamQuestionBankItemRow;
@@ -163,7 +163,7 @@ export async function createQuestionBankItems(inputs: ExamQuestionBankImportQues
   const { data, error } = await supabase.from("exam_question_bank_items").insert(payload).select("*");
 
   if (error || !data) {
-    unwrapSupabaseError(error, "Khong the nhap cau hoi vao ngan hang.");
+    unwrapSupabaseError(error, "Không thể nhập câu hỏi vào ngân hàng.");
   }
 
   return data as ExamQuestionBankItemRow[];
@@ -174,7 +174,7 @@ export async function deleteQuestionBankItem(itemId: string) {
   const { error } = await supabase.from("exam_question_bank_items").delete().eq("id", itemId);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the xoa cau hoi khoi ngan hang.");
+    unwrapSupabaseError(error, "Không thể xóa câu hỏi khỏi ngân hàng.");
   }
 }
 
@@ -186,7 +186,7 @@ export async function getManageableExams() {
     .order("updated_at", { ascending: false });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai danh sach ky thi.");
+    unwrapSupabaseError(error, "Không thể tải danh sách kỳ thi.");
   }
 
   return ((data ?? []) as ExamRowWithClass[]).map((exam) => ({
@@ -200,7 +200,7 @@ export async function getManageableClasses() {
   const { data, error } = await supabase.from("classes").select("id, name").order("name");
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai danh sach lop hoc.");
+    unwrapSupabaseError(error, "Không thể tải danh sách lớp học.");
   }
 
   return (data ?? []) as ClassOption[];
@@ -230,7 +230,7 @@ export async function createExam(input: CreateExamInput) {
     });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tao ky thi.");
+    unwrapSupabaseError(error, "Không thể tạo kỳ thi.");
   }
 
   return {
@@ -259,7 +259,7 @@ export async function updateExamDefinition(input: UpdateExamInput) {
   const currentExam = await getExamForEditor(input.examId);
 
   if (currentExam.status !== "draft") {
-    throw new Error("Chi co the chinh sua thong tin khi ky thi con o trang thai nhap.");
+    throw new Error("Chỉ có thể chỉnh sửa thông tin khi kỳ thi còn ở trạng thái nháp.");
   }
 
   const { error } = await supabase
@@ -276,7 +276,7 @@ export async function updateExamDefinition(input: UpdateExamInput) {
     .eq("id", input.examId);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the cap nhat ky thi.");
+    unwrapSupabaseError(error, "Không thể cập nhật kỳ thi.");
   }
 }
 
@@ -291,7 +291,7 @@ export async function replaceExamQuestions(examId: string, questions: Array<{ qu
   });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the cap nhat bo cau hoi ky thi.");
+    unwrapSupabaseError(error, "Không thể cập nhật bộ câu hỏi kỳ thi.");
   }
 }
 
@@ -300,12 +300,12 @@ export async function publishExam(examId: string) {
   const currentExam = await getExamForEditor(examId);
 
   if (currentExam.status !== "draft") {
-    throw new Error("Ky thi nay khong con o trang thai nhap de phat hanh.");
+    throw new Error("Kỳ thi này không còn ở trạng thái nháp để phát hành.");
   }
 
   const { error } = await supabase.from("exams").update({ status: "published" }).eq("id", examId);
   if (error) {
-    unwrapSupabaseError(error, "Khong the phat hanh ky thi.");
+    unwrapSupabaseError(error, "Không thể phát hành kỳ thi.");
   }
 }
 
@@ -314,7 +314,7 @@ export async function closeExam(examId: string) {
   const { error } = await supabase.from("exams").update({ status: "closed" }).eq("id", examId);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the dong ky thi.");
+    unwrapSupabaseError(error, "Không thể đóng kỳ thi.");
   }
 }
 
@@ -329,7 +329,7 @@ export async function getAccessibleExamsForCurrentUser() {
     .order("created_at", { ascending: false });
 
   if (examsError) {
-    unwrapSupabaseError(examsError, "Khong the tai danh sach ky thi.");
+    unwrapSupabaseError(examsError, "Không thể tải danh sách kỳ thi.");
   }
 
   const normalizedExams = (exams ?? []) as ExamRowWithClass[];
@@ -361,7 +361,7 @@ export async function getAccessibleExamsForCurrentUser() {
 export async function getStudentExamDetail(examId: string): Promise<StudentExamDetail> {
   const supabase = await createServerSupabaseClient();
   const currentUserId = await getCurrentUserId(supabase);
-  const exam = await getExamWithClass(examId, "Khong the tai chi tiet ky thi.", supabase);
+  const exam = await getExamWithClass(examId, "Không thể tải chi tiết kỳ thi.", supabase);
 
   let attempt = await getUserExamAttempt(supabase, examId, currentUserId);
   if (attempt && shouldAutoFinalizeExamAttempt(exam, attempt)) {
@@ -393,7 +393,7 @@ export async function startExamAttempt(examId: string) {
   });
 
   if (error || !data) {
-    unwrapSupabaseError(error, "Khong the bat dau ky thi.");
+    unwrapSupabaseError(error, "Không thể bắt đầu kỳ thi.");
   }
 
   return data as ExamAttemptRow;
@@ -407,7 +407,7 @@ export async function getExamAttemptQuestions(examId: string, attemptId: string)
   });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai bo de cua ky thi.");
+    unwrapSupabaseError(error, "Không thể tải bộ đề của kỳ thi.");
   }
 
   return ((data ?? []) as Array<{
@@ -448,7 +448,7 @@ export async function saveExamAttemptDraft(attemptId: string, answers: Array<{ q
   });
 
   if (error || !data) {
-    unwrapSupabaseError(error, "Khong the luu nhap bai thi.");
+    unwrapSupabaseError(error, "Không thể lưu nháp bài thi.");
   }
 
   return normalizeDraftSaveResult(data as RpcExamAttemptDraftSaveResult);
@@ -465,7 +465,7 @@ export async function submitExamAttempt(attemptId: string, answers: Array<{ ques
   });
 
   if (error || !data) {
-    unwrapSupabaseError(error, "Khong the nop bai ky thi.");
+    unwrapSupabaseError(error, "Không thể nộp bài kỳ thi.");
   }
 
   return normalizeSubmissionResult(data as RpcExamAttemptSubmissionResult);
@@ -478,7 +478,7 @@ export async function getExamLeaderboard(examId: string) {
   });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai bang xep hang ky thi.");
+    unwrapSupabaseError(error, "Không thể tải bảng xếp hạng kỳ thi.");
   }
 
   return (data ?? []) as ExamLeaderboardRow[];
@@ -490,11 +490,11 @@ export async function getExamRankingOptions() {
 }
 
 export async function getExamRankingDetail(examId: string) {
-  return getExamWithClass(examId, "Khong the tai thong tin ky thi cho bang xep hang.");
+  return getExamWithClass(examId, "Không thể tải thông tin kỳ thi cho bảng xếp hạng.");
 }
 
 async function getExamForEditor(examId: string) {
-  return getExamWithClass(examId, "Khong the tai cau hinh ky thi.");
+  return getExamWithClass(examId, "Không thể tải cấu hình kỳ thi.");
 }
 
 async function getExamWithClass(examId: string, fallbackMessage: string, supabaseClient?: SupabaseClient) {
@@ -526,7 +526,7 @@ async function getExamQuestions(examId: string) {
     .order("position", { ascending: true });
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai danh sach cau hoi cua ky thi.");
+    unwrapSupabaseError(error, "Không thể tải danh sách câu hỏi của kỳ thi.");
   }
 
   return (data ?? []) as ExamQuestionRow[];
@@ -540,11 +540,11 @@ async function getCurrentUserId(supabaseClient?: SupabaseClient) {
   } = await supabase.auth.getUser();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the xac thuc nguoi dung hien tai.");
+    unwrapSupabaseError(error, "Không thể xác thực người dùng hiện tại.");
   }
 
   if (!user) {
-    throw new Error("Ban can dang nhap de tiep tuc.");
+    throw new Error("Bạn cần đăng nhập để tiếp tục.");
   }
 
   return user.id;
@@ -552,7 +552,7 @@ async function getCurrentUserId(supabaseClient?: SupabaseClient) {
 
 async function assertClassExamCreationAccess(supabase: SupabaseClient, classId: string | null) {
   if (!classId) {
-    throw new Error("Ky thi lop hoc can chon lop ap dung.");
+    throw new Error("Kỳ thi lớp học cần chọn lớp áp dụng.");
   }
 
   const { data, error } = await supabase
@@ -562,11 +562,11 @@ async function assertClassExamCreationAccess(supabase: SupabaseClient, classId: 
     .maybeSingle();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the xac minh quyen tao ky thi cho lop hoc.");
+    unwrapSupabaseError(error, "Không thể xác minh quyền tạo kỳ thi cho lớp học.");
   }
 
   if (!data) {
-    throw new Error("Ban khong co quyen tao ky thi cho lop nay.");
+    throw new Error("Bạn không có quyền tạo kỳ thi cho lớp này.");
   }
 }
 
@@ -582,7 +582,7 @@ async function listUserExamAttempts(supabase: SupabaseClient, currentUserId: str
     .in("exam_id", examIds);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai trang thai lam bai cua ky thi.");
+    unwrapSupabaseError(error, "Không thể tải trạng thái làm bài của kỳ thi.");
   }
 
   return (data ?? []) as ExamAttemptRow[];
@@ -597,7 +597,7 @@ async function getUserExamAttempt(supabase: SupabaseClient, examId: string, curr
     .maybeSingle();
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai luot lam bai hien tai.");
+    unwrapSupabaseError(error, "Không thể tải lượt làm bài hiện tại.");
   }
 
   return (data ?? null) as ExamAttemptRow | null;
@@ -610,7 +610,7 @@ async function getExamAttemptDraftAnswers(supabase: SupabaseClient, attemptId: s
     .eq("exam_attempt_id", attemptId);
 
   if (error) {
-    unwrapSupabaseError(error, "Khong the tai nhap bai thi.");
+    unwrapSupabaseError(error, "Không thể tải nháp bài thi.");
   }
 
   return ((data ?? []) as Array<Pick<ExamAttemptDraftRow, "exam_question_id" | "user_answer">>).map((row) => ({
@@ -667,7 +667,7 @@ async function finalizeExpiredAttempt(supabase: SupabaseClient, attemptId: strin
   });
 
   if (error && !isStartedAttemptConflict(error.message)) {
-    unwrapSupabaseError(error, "Khong the chot luot lam bai qua han.");
+    unwrapSupabaseError(error, "Không thể chốt lượt làm bài quá hạn.");
   }
 }
 
@@ -710,7 +710,7 @@ function isStartedAttemptConflict(message: string | undefined) {
     return false;
   }
 
-  return message.includes("dang mo");
+  return message.includes("đang mở");
 }
 
 function resolveRelation<T>(value: T | T[] | null) {

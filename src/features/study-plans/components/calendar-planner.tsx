@@ -136,7 +136,7 @@ type CalendarEntry =
 
 const NEXT_AVAILABLE_SLOT = "__next_available__";
 const ALL_ROOT_WORDS_SCHEDULED_MESSAGE =
-  "Tat ca tu goc da co trong lich hoc. Hoan thanh hoac xoa lich cu de them lich moi.";
+  "Tất cả từ gốc đã có trong lịch học. Hoàn thành hoặc xóa lịch cũ để thêm lịch mới.";
 
 const TONE_STYLES: Record<
   CalendarEntryTone,
@@ -245,7 +245,7 @@ export function CalendarPlanner({
   const noAvailableRootWordsMessage =
     rootWords.length > 0
       ? ALL_ROOT_WORDS_SCHEDULED_MESSAGE
-      : "Hay xuat ban mot vai tu goc truoc de dung tinh nang len lich nhanh.";
+      : "Hãy xuất bản một vài từ gốc trước để dùng tính năng lên lịch nhanh.";
 
   const entriesByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEntry[]>();
@@ -466,7 +466,7 @@ export function CalendarPlanner({
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Khong the tao lich hoc.",
+            error instanceof Error ? error.message : "Không thể tạo lịch học.",
         );
       }
     });
