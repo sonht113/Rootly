@@ -1,8 +1,9 @@
 import * as XLSX from "xlsx";
 
 import {
-  CLASS_LESSON_CSV_HEADERS,
+  CLASS_LESSON_CSV_EXAMPLE_COLUMN_PAIRS,
   CLASS_LESSON_CSV_LIST_SEPARATOR,
+  CLASS_LESSON_CSV_REQUIRED_HEADERS,
   classLessonVocabularyCsvRowSchema,
   type ClassLessonVocabularyCsvRowInput,
 } from "@/lib/validations/classes";
@@ -33,13 +34,67 @@ function normalizeListCell(value: unknown) {
   return Array.from(uniqueValues);
 }
 
+function normalizeExampleSentences(row: Record<string, unknown>) {
+  const exampleSentences: ClassLessonVocabularyCsvRowInput["exampleSentences"] = [];
+  const issues: string[] = [];
+
+  for (const pair of CLASS_LESSON_CSV_EXAMPLE_COLUMN_PAIRS) {
+    const english = String(row[pair.english] ?? "").trim();
+    const vietnamese = String(row[pair.vietnamese] ?? "").trim();
+
+    if (!english && !vietnamese) {
+      continue;
+    }
+
+    if (!english) {
+      issues.push(`Cột ${pair.english} không được trống khi đã nhập ${pair.vietnamese}.`);
+      continue;
+    }
+
+    if (!vietnamese) {
+      issues.push(`Cột ${pair.vietnamese} không được trống khi đã nhập ${pair.english}.`);
+      continue;
+    }
+
+    exampleSentences.push({
+      english,
+      vietnamese,
+    });
+  }
+
+  if (exampleSentences.length === 0) {
+    issues.push("Cần ít nhất một cặp câu ví dụ song ngữ.");
+  }
+
+  return {
+    exampleSentences,
+    issues,
+  };
+}
+
 function normalizeImportRow(row: Record<string, unknown>) {
-  return classLessonVocabularyCsvRowSchema.safeParse({
+  const normalizedExamples = normalizeExampleSentences(row);
+  const parsedRow = classLessonVocabularyCsvRowSchema.safeParse({
     word: String(row.Word ?? "").trim(),
     meaning: String(row.Meaning ?? "").trim(),
+    pronunciation: String(row.Pronunciation ?? "").trim() || null,
     synonyms: normalizeListCell(row.Synonyms),
-    exampleSentences: normalizeListCell(row["Example Sentences"]),
+    exampleSentences: normalizedExamples.exampleSentences,
   });
+
+  if (!parsedRow.success || normalizedExamples.issues.length > 0) {
+    const schemaIssues = parsedRow.success ? [] : parsedRow.error.issues.map((issue) => issue.message);
+
+    return {
+      success: false as const,
+      message: [...schemaIssues, ...normalizedExamples.issues].join(", "),
+    };
+  }
+
+  return {
+    success: true as const,
+    data: parsedRow.data,
+  };
 }
 
 export async function parseClassLessonVocabularyImportFile(file: File) {
@@ -63,7 +118,7 @@ export async function parseClassLessonVocabularyImportFile(file: File) {
     }
 
     const headers = (headerRows[0] ?? []).map((value) => String(value ?? "").trim());
-    const missingHeaders = CLASS_LESSON_CSV_HEADERS.filter((header) => !headers.includes(header));
+    const missingHeaders = CLASS_LESSON_CSV_REQUIRED_HEADERS.filter((header) => !headers.includes(header));
 
     if (missingHeaders.length > 0) {
       throw new Error(`Thiếu các cột CSV bắt buộc: ${missingHeaders.join(", ")}`);
@@ -84,7 +139,7 @@ export async function parseClassLessonVocabularyImportFile(file: File) {
       if (!parsedRow.success) {
         invalid.push({
           index: index + 2,
-          message: parsedRow.error.issues.map((issue) => issue.message).join(", "),
+          message: parsedRow.message,
         });
         return;
       }

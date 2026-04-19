@@ -9,6 +9,11 @@ const USER_ROOT_PLAN_UNIQUE_CONSTRAINTS = [
   "user_root_plans_user_id_root_word_id_key",
   "user_root_plans_user_id_root_word_id_scheduled_date_key",
 ] as const;
+const CLASS_LESSON_PRONUNCIATION_MISSING_ERROR_PATTERNS = [
+  "class_lesson_vocab_items.pronunciation",
+  "column pronunciation does not exist",
+  "could not find the 'pronunciation' column",
+] as const;
 
 export interface CurrentUserClassSuggestion {
   id: string;
@@ -30,6 +35,11 @@ export interface ClassMemberCandidate {
   username: string;
 }
 
+export interface ClassLessonExampleSentence {
+  english: string;
+  vietnamese: string;
+}
+
 export interface CurrentStudentClass {
   id: string;
   name: string;
@@ -42,8 +52,9 @@ export interface ClassLessonVocabularyItem {
   lessonId: string;
   word: string;
   meaning: string;
+  pronunciation: string | null;
   synonyms: string[];
-  exampleSentences: string[];
+  exampleSentences: ClassLessonExampleSentence[];
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +69,18 @@ export interface ClassLesson {
   updatedAt: string;
   vocabularyItems: ClassLessonVocabularyItem[];
 }
+
+type ClassLessonVocabularyItemRecord = {
+  id: string;
+  lesson_id: string;
+  word: string;
+  meaning: string;
+  pronunciation: string | null;
+  synonyms: string[] | null;
+  example_sentences: unknown;
+  created_at: string;
+  updated_at: string;
+};
 
 type ClassCountRelation =
   | {
@@ -109,23 +132,84 @@ function getSuggestionPlanStatus(source: UserRootPlanSource) {
   return source === "teacher_suggested" ? "accepted" : "scheduled";
 }
 
-function mapClassLessonVocabularyItem(item: {
-  id: string;
-  lesson_id: string;
-  word: string;
-  meaning: string;
-  synonyms: string[] | null;
-  example_sentences: string[] | null;
-  created_at: string;
-  updated_at: string;
-}): ClassLessonVocabularyItem {
+function isMissingClassLessonPronunciationColumnError(error: { message?: string } | null) {
+  if (!error?.message) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return CLASS_LESSON_PRONUNCIATION_MISSING_ERROR_PATTERNS.some((pattern) => normalizedMessage.includes(pattern));
+}
+
+function resolveClassLessonExampleSentenceRecord(record: Record<string, unknown>): ClassLessonExampleSentence | null {
+  const english =
+    typeof record.english === "string"
+      ? record.english.trim()
+      : typeof record.english_sentence === "string"
+        ? record.english_sentence.trim()
+        : "";
+  const vietnamese =
+    typeof record.vietnamese === "string"
+      ? record.vietnamese.trim()
+      : typeof record.vietnamese_sentence === "string"
+        ? record.vietnamese_sentence.trim()
+        : "";
+
+  if (!english) {
+    return null;
+  }
+
+  return {
+    english,
+    vietnamese,
+  };
+}
+
+function normalizeClassLessonExampleSentences(value: unknown): ClassLessonExampleSentence[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    if (typeof item === "string") {
+      const normalizedItem = item.trim();
+      if (!normalizedItem) {
+        return [];
+      }
+
+      try {
+        const parsedItem = JSON.parse(normalizedItem) as unknown;
+        if (parsedItem && typeof parsedItem === "object" && !Array.isArray(parsedItem)) {
+          const resolvedSentence = resolveClassLessonExampleSentenceRecord(parsedItem as Record<string, unknown>);
+          if (resolvedSentence) {
+            return [resolvedSentence];
+          }
+        }
+      } catch {
+        // Keep supporting legacy plain-text strings that are not JSON.
+      }
+
+      return [{ english: normalizedItem, vietnamese: "" }];
+    }
+
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+
+    const resolvedSentence = resolveClassLessonExampleSentenceRecord(item as Record<string, unknown>);
+    return resolvedSentence ? [resolvedSentence] : [];
+  });
+}
+
+function mapClassLessonVocabularyItem(item: ClassLessonVocabularyItemRecord): ClassLessonVocabularyItem {
   return {
     id: item.id,
     lessonId: item.lesson_id,
     word: item.word,
     meaning: item.meaning,
+    pronunciation: item.pronunciation ?? null,
     synonyms: item.synonyms ?? [],
-    exampleSentences: item.example_sentences ?? [],
+    exampleSentences: normalizeClassLessonExampleSentences(item.example_sentences),
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   };
@@ -184,7 +268,7 @@ export async function createClassLesson(classId: string, title: string, descript
   });
 
   if (error) {
-    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ táº¡o buá»•i há»c");
+    unwrapSupabaseError(error, "Không thể tạo buổi học");
   }
 }
 
@@ -193,7 +277,7 @@ export async function deleteClassLesson(classId: string, lessonId: string) {
   const { error } = await supabase.from("class_lessons").delete().eq("id", lessonId).eq("class_id", classId);
 
   if (error) {
-    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ xÃ³a buá»•i há»c");
+    unwrapSupabaseError(error, "Không thể xóa buổi học");
   }
 }
 
@@ -203,8 +287,9 @@ export async function replaceClassLessonVocabulary(
   items: Array<{
     word: string;
     meaning: string;
+    pronunciation: string | null;
     synonyms: string[];
-    exampleSentences: string[];
+    exampleSentences: ClassLessonExampleSentence[];
   }>,
 ) {
   const supabase = await assertClassManagementAccess(classId);
@@ -216,18 +301,22 @@ export async function replaceClassLessonVocabulary(
     .maybeSingle();
 
   if (lessonError) {
-    unwrapSupabaseError(lessonError, "KhÃ´ng thá»ƒ xÃ¡c minh buá»•i há»c cáº§n cáº­p nháº­t");
+    unwrapSupabaseError(lessonError, "Không thể xác minh buổi học cần cập nhật");
   }
 
   if (!lesson) {
-    throw new Error("KhÃ´ng tÃ¬m tháº¥y buá»•i há»c thuá»™c lá»›p hiá»‡n táº¡i.");
+    throw new Error("Không tìm thấy buổi học thuộc lớp hiện tại.");
   }
 
   const payload = items.map((item) => ({
     word: item.word,
     meaning: item.meaning,
+    pronunciation: item.pronunciation,
     synonyms: item.synonyms,
-    example_sentences: item.exampleSentences,
+    example_sentences: item.exampleSentences.map((sentence) => ({
+      english: sentence.english,
+      vietnamese: sentence.vietnamese,
+    })),
   }));
 
   const { data, error } = await supabase.rpc("replace_class_lesson_vocabulary", {
@@ -236,7 +325,7 @@ export async function replaceClassLessonVocabulary(
   });
 
   if (error) {
-    unwrapSupabaseError(error, "KhÃ´ng thá»ƒ cáº­p nháº­t tá»« vá»±ng cho buá»•i há»c");
+    unwrapSupabaseError(error, "Không thể cập nhật từ vựng cho buổi học");
   }
 
   return Number(data ?? 0);
@@ -251,7 +340,7 @@ export async function getClassLessons(classId: string): Promise<ClassLesson[]> {
     .order("created_at", { ascending: false });
 
   if (lessonsError) {
-    unwrapSupabaseError(lessonsError, "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch buá»•i há»c");
+    unwrapSupabaseError(lessonsError, "Không thể tải danh sách buổi học");
   }
 
   const normalizedLessons = (lessons ?? []) as Array<{
@@ -269,28 +358,36 @@ export async function getClassLessons(classId: string): Promise<ClassLesson[]> {
   }
 
   const lessonIds = normalizedLessons.map((lesson) => lesson.id);
-  const { data: vocabularyItems, error: vocabularyError } = await supabase
+  const { data: vocabularyItemsWithPronunciation, error: vocabularyError } = await supabase
     .from("class_lesson_vocab_items")
-    .select("id, lesson_id, word, meaning, synonyms, example_sentences, created_at, updated_at")
+    .select("id, lesson_id, word, meaning, pronunciation, synonyms, example_sentences, created_at, updated_at")
     .in("lesson_id", lessonIds)
     .order("created_at", { ascending: true });
 
-  if (vocabularyError) {
-    unwrapSupabaseError(vocabularyError, "KhÃ´ng thá»ƒ táº£i tá»« vá»±ng cá»§a buá»•i há»c");
+  let vocabularyItems = (vocabularyItemsWithPronunciation ?? []) as ClassLessonVocabularyItemRecord[];
+
+  if (vocabularyError && isMissingClassLessonPronunciationColumnError(vocabularyError)) {
+    const { data: fallbackVocabularyItems, error: fallbackVocabularyError } = await supabase
+      .from("class_lesson_vocab_items")
+      .select("id, lesson_id, word, meaning, synonyms, example_sentences, created_at, updated_at")
+      .in("lesson_id", lessonIds)
+      .order("created_at", { ascending: true });
+
+    if (fallbackVocabularyError) {
+      unwrapSupabaseError(fallbackVocabularyError, "Không thể tải từ vựng của buổi học");
+    }
+
+    vocabularyItems = ((fallbackVocabularyItems ?? []) as Array<Omit<ClassLessonVocabularyItemRecord, "pronunciation">>).map((item) => ({
+      ...item,
+      pronunciation: null,
+    }));
+  } else if (vocabularyError) {
+    unwrapSupabaseError(vocabularyError, "Không thể tải từ vựng của buổi học");
   }
 
   const vocabularyByLessonId = new Map<string, ClassLessonVocabularyItem[]>();
 
-  for (const item of ((vocabularyItems ?? []) as Array<{
-    id: string;
-    lesson_id: string;
-    word: string;
-    meaning: string;
-    synonyms: string[] | null;
-    example_sentences: string[] | null;
-    created_at: string;
-    updated_at: string;
-  }>)) {
+  for (const item of vocabularyItems) {
     const lessonVocabularyItems = vocabularyByLessonId.get(item.lesson_id) ?? [];
     lessonVocabularyItems.push(mapClassLessonVocabularyItem(item));
     vocabularyByLessonId.set(item.lesson_id, lessonVocabularyItems);
@@ -545,7 +642,7 @@ export async function getCurrentUserClassSuggestions(): Promise<CurrentUserClass
   );
 
   if (membershipError) {
-    unwrapSupabaseError(membershipError, "Khong the xac dinh danh sach lop hoc cua ban");
+    unwrapSupabaseError(membershipError, "Không thể xác định danh sách lớp học của bạn");
   }
 
   const classIds = Array.from(
@@ -729,14 +826,14 @@ export async function acceptClassSuggestionIntoPlan(suggestionId: string) {
         .limit(1);
 
       if (conflictedPlanError) {
-        unwrapSupabaseError(conflictedPlanError, "Khong the kiem tra lich hoc hien tai");
+        unwrapSupabaseError(conflictedPlanError, "Không thể kiểm tra lịch học hiện tại");
       }
 
       const conflictedPlan = (conflictedPlans ?? [])[0] ?? null;
       if (conflictedPlan) {
         return {
           status: getSuggestionPlanStatus(conflictedPlan.source as UserRootPlanSource),
-          rootWordLabel: rootWord?.root ?? "tu goc nay",
+          rootWordLabel: rootWord?.root ?? "từ gốc này",
           suggestedDate: resolvedSuggestion.suggested_date,
         };
       }
