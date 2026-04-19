@@ -2,9 +2,9 @@ import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockedGetPaginatedLibraryRootWords, mockedGetUser } = vi.hoisted(() => ({
+const { mockedGetPaginatedLibraryRootWords, mockedGetCurrentProfile } = vi.hoisted(() => ({
   mockedGetPaginatedLibraryRootWords: vi.fn(),
-  mockedGetUser: vi.fn(),
+  mockedGetCurrentProfile: vi.fn(),
 }));
 
 vi.mock("next/link", () => ({
@@ -15,12 +15,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createServerSupabaseClient: vi.fn(async () => ({
-    auth: {
-      getUser: mockedGetUser,
-    },
-  })),
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentProfile: mockedGetCurrentProfile,
 }));
 
 vi.mock("@/server/repositories/root-words-repository", () => ({
@@ -55,25 +51,34 @@ function createRootWord(index: number) {
     originLabel: `Origin ${index}`,
     masteryProgress: 40 + index,
     learningStatus: null,
-    ctaLabel: "Học ngay",
+    ctaLabel: "Hoc ngay",
     ctaHref: `/library/root-${index}`,
+  };
+}
+
+function createNamedRootWord(root: string, wordCount: number) {
+  return {
+    ...createRootWord(wordCount),
+    id: root,
+    root,
+    wordCount,
+    previewWords: [`${root}-word`],
+    originLabel: `Origin ${root}`,
+    ctaHref: `/library/${root}`,
   };
 }
 
 describe("LibraryPage", () => {
   beforeEach(() => {
     mockedGetPaginatedLibraryRootWords.mockReset();
-    mockedGetUser.mockReset();
-    mockedGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "user-1",
-        },
-      },
+    mockedGetCurrentProfile.mockReset();
+    mockedGetCurrentProfile.mockResolvedValue({
+      auth_user_id: "user-1",
+      role: "student",
     });
   });
 
-  it("requests server-side pagination and preserves query params in page links", async () => {
+  it("requests server-side pagination for library searches and preserves query params in page links", async () => {
     mockedGetPaginatedLibraryRootWords.mockResolvedValue({
       items: Array.from({ length: 10 }, (_, index) => createRootWord(index + 1)),
       totalCount: 25,
@@ -85,7 +90,7 @@ describe("LibraryPage", () => {
     render(
       await LibraryPage({
         searchParams: Promise.resolve({
-          q: "bio",
+          q: "respect",
           level: "basic",
           page: "2",
         }),
@@ -93,15 +98,40 @@ describe("LibraryPage", () => {
     );
 
     expect(mockedGetPaginatedLibraryRootWords).toHaveBeenCalledWith({
-      query: "bio",
+      query: "respect",
       level: "basic",
       userId: "user-1",
       page: 2,
       pageSize: 10,
     });
-    expect(screen.getByText("Hiển thị 11-20 trên 25 root word")).toBeInTheDocument();
     expect(screen.getByText("Trang 2/3")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Trước/i })).toHaveAttribute("href", "/library?q=bio&level=basic");
-    expect(screen.getByRole("link", { name: /Sau/i })).toHaveAttribute("href", "/library?q=bio&level=basic&page=3");
+    expect(screen.getByRole("link", { name: "Trước" })).toHaveAttribute("href", "/library?q=respect&level=basic");
+    expect(screen.getByRole("link", { name: "Sau" })).toHaveAttribute("href", "/library?q=respect&level=basic&page=3");
+  });
+  it("keeps search results in the card list instead of moving the top match into spotlight", async () => {
+    mockedGetPaginatedLibraryRootWords.mockResolvedValue({
+      items: [
+        createNamedRootWord("able", 5),
+        createNamedRootWord("bio", 1),
+        createNamedRootWord("port", 1),
+      ],
+      totalCount: 3,
+      totalPages: 1,
+      currentPage: 1,
+      pageSize: 10,
+    });
+
+    render(
+      await LibraryPage({
+        searchParams: Promise.resolve({
+          q: "able",
+        }),
+      }),
+    );
+
+    expect(screen.getByText("card-able")).toBeInTheDocument();
+    expect(screen.getByText("card-bio")).toBeInTheDocument();
+    expect(screen.getByText("card-port")).toBeInTheDocument();
+    expect(screen.queryByText("spotlight-able")).not.toBeInTheDocument();
   });
 });

@@ -143,7 +143,7 @@ describe("study plan mutations", () => {
         scheduledDate: "2026-04-20",
         source: "manual",
       }),
-    ).rejects.toThrow("Tu goc nay da co trong lich hoc cua ban");
+    ).rejects.toThrow("Từ gốc này đã có trong lịch học của bạn");
 
     expect(insertPayloads).toEqual([]);
     expect(selectEqCalls).toEqual([
@@ -170,7 +170,7 @@ describe("study plan mutations", () => {
         scheduledDate: "2026-04-20",
         source: "manual",
       }),
-    ).rejects.toThrow("Tu goc nay da co trong lich hoc cua ban");
+    ).rejects.toThrow("Từ gốc này đã có trong lịch học của bạn");
 
     expect(insertPayloads).toEqual([
       {
@@ -195,7 +195,7 @@ describe("study plan mutations", () => {
         scheduledDate: "2026-04-22",
         source: "manual",
       }),
-    ).rejects.toThrow("Tu goc nay da co trong lich hoc cua ban");
+    ).rejects.toThrow("Từ gốc này đã có trong lịch học của bạn");
 
     expect(updatePayloads).toEqual([]);
     expect(selectEqCalls).toEqual([

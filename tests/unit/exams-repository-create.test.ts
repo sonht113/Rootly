@@ -122,7 +122,7 @@ describe("exams repository createExam", () => {
         endsAt: null,
         durationMinutes: 30,
       }),
-    ).rejects.toThrow("Ban khong co quyen tao ky thi cho lop nay.");
+    ).rejects.toThrow("Bạn không có quyền tạo kỳ thi cho lớp này.");
 
     expect(mockExamInsert).not.toHaveBeenCalled();
   });

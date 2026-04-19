@@ -8,7 +8,7 @@ import { rootWordSchema } from "@/lib/validations/root-words";
 import { setTodayDailyRootRecommendation } from "@/server/repositories/daily-root-recommendations-repository";
 import { deleteRootWord, upsertRootWord } from "@/server/repositories/root-words-repository";
 
-const rootWordIdSchema = z.string().uuid("Root word khong hop le.");
+const rootWordIdSchema = z.string().uuid("Root word không hợp lệ.");
 
 export async function saveRootWordAction(input: unknown) {
   const user = await getCurrentSession();

@@ -125,7 +125,8 @@ export default async function LibraryPage({
       level: activeLevel,
       page: nextPage,
     });
-  const featuredRootWord = getFeaturedRootWord(rootWords);
+  const hasActiveSearch = query.length > 0;
+  const featuredRootWord = hasActiveSearch ? null : getFeaturedRootWord(rootWords);
   const rankedRootWords = featuredRootWord
     ? rootWords.filter((rootWord) => rootWord.id !== featuredRootWord.id)
     : rootWords;

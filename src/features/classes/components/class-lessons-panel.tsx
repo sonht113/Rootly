@@ -24,16 +24,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createClassLessonAction,
   deleteClassLessonAction,
   uploadClassLessonVocabularyAction,
 } from "@/features/classes/actions/classes";
-import { CLASS_LESSON_CSV_ACCEPT_ATTRIBUTE, createClassLessonSchema } from "@/lib/validations/classes";
+import {
+  CLASS_LESSON_CSV_ACCEPT_ATTRIBUTE,
+  CLASS_LESSON_CSV_HEADERS,
+  createClassLessonSchema,
+} from "@/lib/validations/classes";
 import type { ClassLesson } from "@/server/repositories/classes-repository";
 
 const LESSON_TEMPLATE_PATH = "/templates/class-lessons/class-lesson-template.csv";
+const LESSON_TEMPLATE_COLUMNS = CLASS_LESSON_CSV_HEADERS.join(", ");
+const LESSON_VOCABULARY_PAGE_SIZE = 10;
 const createClassLessonClientSchema = createClassLessonSchema.omit({ classId: true });
 
 type CreateClassLessonFormValues = z.input<typeof createClassLessonClientSchema>;
@@ -65,6 +72,8 @@ function LessonVocabularyList({
   lesson: ClassLesson;
   emptyMessage: string;
 }) {
+  const [page, setPage] = useState(1);
+
   if (lesson.vocabularyItems.length === 0) {
     return (
       <div className="rounded-[14px] border border-dashed border-[color:var(--border)] bg-[color:var(--muted)]/50 p-4 text-sm text-[color:var(--muted-foreground)]">
@@ -73,50 +82,98 @@ function LessonVocabularyList({
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(lesson.vocabularyItems.length / LESSON_VOCABULARY_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * LESSON_VOCABULARY_PAGE_SIZE;
+  const visibleItems = lesson.vocabularyItems.slice(startIndex, startIndex + LESSON_VOCABULARY_PAGE_SIZE);
+
   return (
-    <div data-testid="lesson-vocabulary-scroll-container" className="max-h-[24rem] overflow-y-auto pr-2">
-      <div className="space-y-3">
-        {lesson.vocabularyItems.map((item) => (
-          <article key={item.id} className="space-y-4 rounded-[16px] border border-[color:var(--border)] bg-white p-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h4 className="text-base font-semibold text-[color:var(--foreground)]">{item.word}</h4>
-                <Badge variant="outline">{item.synonyms.length} từ đồng nghĩa</Badge>
-                <Badge variant="outline">{item.exampleSentences.length} câu ví dụ</Badge>
-              </div>
-              <p className="break-words text-sm leading-6 text-[color:var(--muted-foreground)]">{item.meaning}</p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <section className="space-y-2 rounded-[14px] bg-[color:var(--muted)]/60 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                  Từ đồng nghĩa
-                </p>
-                <ul className="space-y-1 text-sm leading-6 text-[color:var(--foreground)]">
-                  {item.synonyms.map((synonym, index) => (
-                    <li key={`${item.id}-synonym-${index}`} className="break-words">
-                      {synonym}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="space-y-2 rounded-[14px] bg-[color:var(--muted)]/60 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                  Câu ví dụ
-                </p>
-                <ul className="space-y-1 text-sm leading-6 text-[color:var(--foreground)]">
-                  {item.exampleSentences.map((sentence, index) => (
-                    <li key={`${item.id}-example-${index}`} className="break-words">
-                      {sentence}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-          </article>
-        ))}
+    <div className="space-y-4">
+      <div data-testid="lesson-vocabulary-table">
+        <Table aria-label={`Danh sách từ vựng của ${lesson.title}`}>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[10rem]">Từ vựng</TableHead>
+              <TableHead className="min-w-[10rem]">Nghĩa</TableHead>
+              <TableHead className="min-w-[9rem]">Phiên âm</TableHead>
+              <TableHead className="min-w-[12rem]">Từ đồng nghĩa</TableHead>
+              <TableHead className="min-w-[24rem]">Câu ví dụ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleItems.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-semibold text-[color:var(--foreground)]">{item.word}</TableCell>
+                <TableCell className="text-[color:var(--muted-foreground)]">{item.meaning}</TableCell>
+                <TableCell className="text-[color:var(--muted-foreground)]">{item.pronunciation ?? "—"}</TableCell>
+                <TableCell>
+                  {item.synonyms.length > 0 ? (
+                    <ul className="space-y-1 text-sm leading-6 text-[color:var(--foreground)]">
+                      {item.synonyms.map((synonym, index) => (
+                        <li key={`${item.id}-synonym-${index}`} className="break-words">
+                          {synonym}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="text-sm text-[color:var(--muted-foreground)]">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-3">
+                    {item.exampleSentences.map((sentence, index) => (
+                      <div
+                        key={`${item.id}-example-${index}`}
+                        className="rounded-[12px] border border-[color:var(--border)] bg-[color:var(--muted)]/40 p-3"
+                      >
+                        <p className="break-words font-medium text-[color:var(--foreground)]">{sentence.english}</p>
+                        {sentence.vietnamese ? (
+                          <p className="mt-1 break-words text-[color:var(--muted-foreground)]">{sentence.vietnamese}</p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
+
+      {totalPages > 1 ? (
+        <div
+          data-testid="lesson-vocabulary-pagination"
+          className="flex flex-col gap-3 rounded-[14px] border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm text-[color:var(--muted-foreground)]">
+            Hiển thị {startIndex + 1}-{startIndex + visibleItems.length} / {lesson.vocabularyItems.length} từ vựng
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Trước
+            </Button>
+            <span className="min-w-[6rem] text-center text-sm font-medium text-[color:var(--foreground)]">
+              Trang {currentPage}/{totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -202,10 +259,10 @@ function LessonVocabularyUploadForm({
             onChange={() => setIssues([])}
           />
           <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
-            Cột bắt buộc: Word, Meaning, Synonyms, Example Sentences. Nhiều giá trị trong Synonyms và Example Sentences ngăn cách bằng dấu |.
+            Template CSV hiện dùng các cột {LESSON_TEMPLATE_COLUMNS}. Pronunciation là cột tùy chọn để hiển thị phiên âm cho học viên.
           </p>
           <p className="text-xs leading-5 text-[color:var(--muted-foreground)]">
-            Mỗi dòng là 1 từ. Vui lòng dùng đúng tên cột trong CSV.
+            Mỗi dòng là 1 từ. Synonyms ngăn cách nhiều giá trị bằng dấu |, còn 3 cặp câu ví dụ cần điền riêng vào các cột Example Sentence EN/VI tương ứng.
           </p>
         </div>
 
@@ -384,7 +441,7 @@ export function TeacherClassLessonsPanel({
         <CardHeader className="space-y-2">
           <CardTitle>Tạo buổi học</CardTitle>
           <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
-            Giáo viên tạo buổi học theo chủ đề, sau đó tải lên tệp CSV để cập nhật danh sách từ vựng cho từng buổi.
+            Giáo viên tạo buổi học theo chủ đề, sau đó tải lên tệp CSV để cập nhật danh sách từ vựng, phiên âm và 3 cặp ví dụ song ngữ cho từng buổi.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -427,7 +484,7 @@ export function TeacherClassLessonsPanel({
         <CardHeader className="space-y-2">
           <CardTitle>Buổi học từ vựng</CardTitle>
           <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
-            Mỗi buổi học có thể chứa danh sách từ, nghĩa, từ đồng nghĩa và câu ví dụ để học viên xem lại sau khi tham gia lớp.
+            Mỗi buổi học có thể chứa danh sách từ, nghĩa, phiên âm, từ đồng nghĩa và 3 cặp câu ví dụ song ngữ để học viên xem lại sau khi tham gia lớp.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">

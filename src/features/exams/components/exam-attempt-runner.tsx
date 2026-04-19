@@ -121,7 +121,7 @@ export function ExamAttemptRunner({
       if (!response.ok) {
         setSaveState("error");
         if (!silent) {
-          toast.error(result.message ?? "Khong the luu nhap bai thi.");
+          toast.error(result.message ?? "Không thể lưu nháp bài thi.");
         }
         if (response.status === 409) {
           setFinalizing(true);
@@ -137,8 +137,8 @@ export function ExamAttemptRunner({
         setRemainingSeconds(0);
         toast.success(
           result.status === "expired"
-            ? "Het gio lam bai. He thong da tu chot bai cua ban."
-            : "Bai thi da duoc chot.",
+            ? "Hết giờ làm bài. Hệ thống đã tự chốt bài của bạn."
+            : "Bài thi đã được chốt.",
         );
         router.refresh();
         return { ok: true, finalized: true };
@@ -151,7 +151,7 @@ export function ExamAttemptRunner({
     } catch (error) {
       setSaveState("error");
       if (!silent) {
-        toast.error(error instanceof Error ? error.message : "Khong the luu nhap bai thi.");
+        toast.error(error instanceof Error ? error.message : "Không thể lưu nháp bài thi.");
       }
       return { ok: false, finalized: false };
     }
@@ -196,7 +196,7 @@ export function ExamAttemptRunner({
         const result = (await response.json()) as SubmitResponse;
         if (!response.ok) {
           setFinalizing(false);
-          toast.error(result.message ?? "Khong the nop bai thi.");
+          toast.error(result.message ?? "Không thể nộp bài thi.");
           return;
         }
 
@@ -205,13 +205,13 @@ export function ExamAttemptRunner({
         setRemainingSeconds(0);
         toast.success(
           result.status === "expired"
-            ? "Het gio lam bai. He thong da tu chot bai cua ban."
-            : `Da nop bai thi. Diem cua ban: ${result.score ?? 0}%.`,
+            ? "Hết giờ làm bài. Hệ thống đã tự chốt bài của bạn."
+            : `Đã nộp bài thi. Điểm của bạn: ${result.score ?? 0}%.`,
         );
         router.refresh();
       } catch (error) {
         setFinalizing(false);
-        toast.error(error instanceof Error ? error.message : "Khong the nop bai thi.");
+        toast.error(error instanceof Error ? error.message : "Không thể nộp bài thi.");
       }
     });
   }
@@ -278,7 +278,7 @@ export function ExamAttemptRunner({
     return (
       <Card>
         <CardContent className="p-6 text-sm text-[color:var(--muted-foreground)]">
-          Bo de hien chua san sang. Hay tai lai trang de dong bo trang thai bai thi.
+          Bộ đề hiện chưa sẵn sàng. Hãy tải lại trang để đồng bộ trạng thái bài thi.
         </CardContent>
       </Card>
     );
@@ -306,11 +306,11 @@ export function ExamAttemptRunner({
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm text-[color:var(--muted-foreground)]">
               <span>
-                Cau {currentIndex + 1}/{questions.length}
+                Câu {currentIndex + 1}/{questions.length}
               </span>
               <span>|</span>
               <span>
-                Da tra loi {answeredCount}/{questions.length}
+                Đã trả lời {answeredCount}/{questions.length}
               </span>
             </div>
             <p className="text-xs text-[color:var(--muted-foreground)]">
@@ -325,14 +325,14 @@ export function ExamAttemptRunner({
               Con lai {formatExamDuration(effectiveRemainingSeconds ?? 0)}
             </Badge>
           ) : (
-            <Badge variant="outline">Khong gioi han thoi gian</Badge>
+            <Badge variant="outline">Không giới hạn thời gian</Badge>
           )}
         </div>
 
         <Progress value={progress} />
         {runtime?.isTimed ? (
           <p className="text-xs text-[color:var(--muted-foreground)]">
-            He thong se tu luu nhap trong qua trinh lam bai va tu chot bai khi het gio.
+            Hệ thống sẽ tự lưu nháp trong quá trình làm bài và tự chốt bài khi hết giờ.
           </p>
         ) : null}
       </div>
@@ -341,7 +341,7 @@ export function ExamAttemptRunner({
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <CardTitle className="text-xl">{question.prompt}</CardTitle>
-            <Badge variant="outline">{question.points} diem</Badge>
+            <Badge variant="outline">{question.points} điểm</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -372,7 +372,7 @@ export function ExamAttemptRunner({
           ) : (
             <Textarea
               className="min-h-[140px] rounded-[14px] p-3"
-              placeholder="Nhap cau tra loi cua ban"
+              placeholder="Nhập câu trả lời của bạn"
               disabled={isBusy}
               value={currentAnswer}
               onChange={(event) => updateAnswer(question.questionId, event.target.value)}
@@ -388,23 +388,23 @@ export function ExamAttemptRunner({
           disabled={currentIndex === 0 || isBusy}
           onClick={() => setCurrentIndex((value) => value - 1)}
         >
-          Quay lai
+          Quay lại
         </Button>
 
         {currentIndex === questions.length - 1 ? (
           <Button type="button" variant="accent" disabled={isBusy} onClick={() => finalizeAttempt("manual")}>
             {isSubmitting ? <Loader2 className="animate-spin" /> : null}
-            Nop bai thi
+            Nộp bài thi
           </Button>
         ) : (
           <Button type="button" disabled={isBusy} onClick={() => setCurrentIndex((value) => value + 1)}>
-            Tiep tuc
+            Tiếp tục
           </Button>
         )}
       </div>
 
       <p className="text-xs text-[color:var(--muted-foreground)]">
-        Ma luot lam bai: {attemptId.slice(0, 8)} | Ky thi: {examId.slice(0, 8)}
+        Mã lượt làm bài: {attemptId.slice(0, 8)} | Kỳ thi: {examId.slice(0, 8)}
       </p>
     </div>
   );
@@ -430,24 +430,24 @@ function serializeAnswers(answers: ExamSubmissionAnswer[]) {
 
 function getSaveStatusLabel(saveState: SaveState, lastSavedAt: number | null, hasPendingChanges: boolean) {
   if (saveState === "saving") {
-    return "Dang luu nhap tu dong...";
+    return "Đang lưu nháp tự động...";
   }
 
   if (hasPendingChanges) {
-    return "Co thay doi chua duoc luu nhap.";
+    return "Có thay đổi chưa được lưu nháp.";
   }
 
   if (saveState === "error") {
-    return "Chua the luu nhap. Hay kiem tra ket noi va thu lai.";
+    return "Chưa thể lưu nháp. Hãy kiểm tra kết nối và thử lại.";
   }
 
   if (lastSavedAt) {
-    return `Da luu nhap luc ${new Intl.DateTimeFormat("vi-VN", {
+    return `Đã lưu nháp lúc ${new Intl.DateTimeFormat("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
     }).format(new Date(lastSavedAt))}.`;
   }
 
-  return "Cau tra loi se duoc tu dong luu nhap trong qua trinh lam bai.";
+  return "Câu trả lời sẽ được tự động lưu nháp trong quá trình làm bài.";
 }

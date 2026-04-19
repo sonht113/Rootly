@@ -1,7 +1,24 @@
 import { z } from "zod";
 
 export const CLASS_LESSON_CSV_ACCEPT_ATTRIBUTE = ".csv,text/csv";
-export const CLASS_LESSON_CSV_HEADERS = ["Word", "Meaning", "Synonyms", "Example Sentences"] as const;
+export const CLASS_LESSON_CSV_EXAMPLE_COLUMN_PAIRS = [
+  { english: "Example Sentence 1 EN", vietnamese: "Example Sentence 1 VI" },
+  { english: "Example Sentence 2 EN", vietnamese: "Example Sentence 2 VI" },
+  { english: "Example Sentence 3 EN", vietnamese: "Example Sentence 3 VI" },
+] as const;
+export const CLASS_LESSON_CSV_HEADERS = [
+  "Word",
+  "Meaning",
+  "Pronunciation",
+  "Synonyms",
+  ...CLASS_LESSON_CSV_EXAMPLE_COLUMN_PAIRS.flatMap((pair) => [pair.english, pair.vietnamese]),
+] as const;
+export const CLASS_LESSON_CSV_REQUIRED_HEADERS = [
+  "Word",
+  "Meaning",
+  "Synonyms",
+  ...CLASS_LESSON_CSV_EXAMPLE_COLUMN_PAIRS.flatMap((pair) => [pair.english, pair.vietnamese]),
+] as const;
 export const CLASS_LESSON_CSV_LIST_SEPARATOR = "|";
 
 function normalizeOptionalText(value: string | null | undefined) {
@@ -87,11 +104,31 @@ export const uploadClassLessonVocabularySchema = z.object({
 const classLessonListValueSchema = z
   .array(z.string().trim().min(1, "Giá trị trong danh sách không được trống"));
 
+const classLessonExampleSentenceSchema = z.object({
+  english: z
+    .string()
+    .trim()
+    .min(1, "Câu ví dụ tiếng Anh không được trống")
+    .max(500, "Câu ví dụ tiếng Anh tối đa 500 ký tự"),
+  vietnamese: z
+    .string()
+    .trim()
+    .min(1, "Bản dịch tiếng Việt không được trống")
+    .max(500, "Bản dịch tiếng Việt tối đa 500 ký tự"),
+});
+
 export const classLessonVocabularyCsvRowSchema = z.object({
   word: z.string().trim().min(1, "Cột Word không được trống").max(120, "Word tối đa 120 ký tự"),
   meaning: z.string().trim().min(1, "Cột Meaning không được trống").max(500, "Meaning tối đa 500 ký tự"),
+  pronunciation: normalizedOptionalTextSchema.refine(
+    (value) => value === null || value.length <= 120,
+    "Pronunciation tối đa 120 ký tự",
+  ),
   synonyms: classLessonListValueSchema.min(1, "Cần ít nhất một từ đồng nghĩa trong cột Synonyms"),
-  exampleSentences: classLessonListValueSchema.min(1, "Cần ít nhất một câu ví dụ trong cột Example Sentences"),
+  exampleSentences: z
+    .array(classLessonExampleSentenceSchema)
+    .min(1, "Cần ít nhất một cặp câu ví dụ song ngữ")
+    .max(3, "Tối đa 3 cặp câu ví dụ song ngữ"),
 });
 
 export type CreateClassInput = z.infer<typeof createClassSchema>;
@@ -103,4 +140,5 @@ export type RemoveClassMemberInput = z.infer<typeof removeClassMemberSchema>;
 export type CreateClassLessonInput = z.infer<typeof createClassLessonSchema>;
 export type DeleteClassLessonInput = z.infer<typeof deleteClassLessonSchema>;
 export type UploadClassLessonVocabularyInput = z.infer<typeof uploadClassLessonVocabularySchema>;
+export type ClassLessonExampleSentenceInput = z.infer<typeof classLessonExampleSentenceSchema>;
 export type ClassLessonVocabularyCsvRowInput = z.infer<typeof classLessonVocabularyCsvRowSchema>;
