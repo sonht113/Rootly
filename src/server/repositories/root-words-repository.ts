@@ -8,14 +8,15 @@ import { unwrapSupabaseError } from "@/server/repositories/shared";
 
 export async function getPublishedRootWords(filters?: { query?: string; level?: string }) {
   const supabase = await createServerSupabaseClient();
+  const searchContext = await resolveLibraryRootWordSearch(supabase, filters?.query);
   let query = supabase
     .from("root_words")
     .select("*, words(count)")
     .eq("is_published", true)
     .order("root");
 
-  if (filters?.query) {
-    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%`);
+  if (searchContext.searchClause) {
+    query = query.or(searchContext.searchClause);
   }
 
   if (filters?.level) {
@@ -27,7 +28,10 @@ export async function getPublishedRootWords(filters?: { query?: string; level?: 
     unwrapSupabaseError(error, "Không thể tải thư viện từ gốc");
   }
 
-  return (data ?? []) as Array<RootWordRow & { words: Array<{ count: number }> }>;
+  return sortLibraryRootWordsBySearchPriority(
+    (data ?? []) as Array<RootWordRow & { words: Array<{ count: number }> }>,
+    searchContext,
+  );
 }
 
 export interface LibraryRootWord extends RootWordRow {
@@ -55,6 +59,11 @@ export interface PaginatedAdminRootWords {
   totalPages: number;
   currentPage: number;
   pageSize: number;
+}
+
+interface LibraryRootWordSearchContext {
+  normalizedQuery: string | null;
+  searchClause: string | null;
 }
 
 interface LibraryRootWordFilters {
@@ -133,14 +142,108 @@ function getNormalizedPositiveInteger(value: number | undefined, fallback: numbe
   return Math.floor(value);
 }
 
+function buildLibraryRootWordsDirectSearchClause(query: string) {
+  return `root.ilike.%${query}%,meaning.ilike.%${query}%,description.ilike.%${query}%`;
+}
+
+function buildRelatedWordsSearchClause(query: string) {
+  return `word.ilike.%${query}%,meaning_en.ilike.%${query}%,meaning_vi.ilike.%${query}%`;
+}
+
+function matchesLibraryRootWordsDirectSearch(
+  rootWord: Pick<RootWordRow, "root" | "meaning" | "description">,
+  normalizedQuery: string,
+) {
+  const queryValue = normalizedQuery.toLocaleLowerCase();
+
+  return [rootWord.root, rootWord.meaning, rootWord.description].some((value) =>
+    value.toLocaleLowerCase().includes(queryValue),
+  );
+}
+
+function sortLibraryRootWordsBySearchPriority<TRootWord extends Pick<RootWordRow, "root" | "meaning" | "description">>(
+  rootWords: TRootWord[],
+  searchContext?: LibraryRootWordSearchContext,
+) {
+  if (!searchContext?.normalizedQuery) {
+    return rootWords;
+  }
+
+  return [...rootWords].sort((left, right) => {
+    const leftMatchesDirectly = matchesLibraryRootWordsDirectSearch(left, searchContext.normalizedQuery!);
+    const rightMatchesDirectly = matchesLibraryRootWordsDirectSearch(right, searchContext.normalizedQuery!);
+
+    if (leftMatchesDirectly !== rightMatchesDirectly) {
+      return leftMatchesDirectly ? -1 : 1;
+    }
+
+    return left.root.localeCompare(right.root);
+  });
+}
+
+async function resolveLibraryRootWordSearch(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  query?: string,
+): Promise<LibraryRootWordSearchContext> {
+  const normalizedQuery = query?.trim();
+  if (!normalizedQuery) {
+    return {
+      normalizedQuery: null,
+      searchClause: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("words")
+    .select("root_word_id")
+    .or(buildRelatedWordsSearchClause(normalizedQuery));
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tìm root word liên quan từ bảng words");
+  }
+
+  const matchedRootWordIds = Array.from(
+    new Set(
+      (data ?? [])
+        .map((row) => row.root_word_id)
+        .filter((rootWordId): rootWordId is string => typeof rootWordId === "string" && rootWordId.length > 0),
+    ),
+  );
+  const clauses = [buildLibraryRootWordsDirectSearchClause(normalizedQuery)];
+
+  if (matchedRootWordIds.length > 0) {
+    clauses.push(`id.in.(${matchedRootWordIds.join(",")})`);
+  }
+
+  return {
+    normalizedQuery,
+    searchClause: clauses.join(","),
+  };
+}
+
+async function getSortedLibraryRootWordsForSearch(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  filters: Pick<LibraryRootWordFilters, "query" | "level"> | undefined,
+  searchContext: LibraryRootWordSearchContext,
+) {
+  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters, searchContext);
+
+  if (error) {
+    unwrapSupabaseError(error, "Không thể tải thư viện từ gốc");
+  }
+
+  return sortLibraryRootWordsBySearchPriority((rootWords ?? []) as RootWordRow[], searchContext);
+}
+
 function buildLibraryRootWordsDataQuery(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   filters?: Pick<LibraryRootWordFilters, "query" | "level">,
+  searchContext?: LibraryRootWordSearchContext,
 ) {
   let query = supabase.from("root_words").select("*").eq("is_published", true).order("root");
 
-  if (filters?.query) {
-    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%,description.ilike.%${filters.query}%`);
+  if (searchContext?.searchClause) {
+    query = query.or(searchContext.searchClause);
   }
 
   if (filters?.level) {
@@ -153,11 +256,12 @@ function buildLibraryRootWordsDataQuery(
 function buildLibraryRootWordsCountQuery(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   filters?: Pick<LibraryRootWordFilters, "query" | "level">,
+  searchContext?: LibraryRootWordSearchContext,
 ) {
   let query = supabase.from("root_words").select("*", { count: "exact", head: true }).eq("is_published", true);
 
-  if (filters?.query) {
-    query = query.or(`root.ilike.%${filters.query}%,meaning.ilike.%${filters.query}%,description.ilike.%${filters.query}%`);
+  if (searchContext?.searchClause) {
+    query = query.or(searchContext.searchClause);
   }
 
   if (filters?.level) {
@@ -399,20 +503,52 @@ async function hydrateLibraryRootWords(
 
 export async function getLibraryRootWords(filters?: LibraryRootWordFilters) {
   const supabase = await createServerSupabaseClient();
-  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters);
+  const searchContext = await resolveLibraryRootWordSearch(supabase, filters?.query);
+  const rootWords = await getSortedLibraryRootWordsForSearch(supabase, filters, searchContext);
 
-  if (error) {
-    unwrapSupabaseError(error, "Không thể tải thư viện từ gốc");
-  }
-
-  return hydrateLibraryRootWords(supabase, (rootWords ?? []) as RootWordRow[], filters?.userId ?? null);
+  return hydrateLibraryRootWords(supabase, rootWords, filters?.userId ?? null);
 }
 
 export async function getPaginatedLibraryRootWords(filters?: PaginatedLibraryRootWordFilters): Promise<PaginatedLibraryRootWords> {
   const supabase = await createServerSupabaseClient();
   const requestedPage = getNormalizedPositiveInteger(filters?.page, 1);
   const pageSize = getNormalizedPositiveInteger(filters?.pageSize, 10);
-  const { count, error: countError } = await buildLibraryRootWordsCountQuery(supabase, filters);
+  const searchContext = await resolveLibraryRootWordSearch(supabase, filters?.query);
+
+  if (searchContext.normalizedQuery) {
+    const matchedRootWords = await getSortedLibraryRootWordsForSearch(supabase, filters, searchContext);
+    const totalCount = matchedRootWords.length;
+    const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 1;
+    const currentPage = totalCount > 0 ? Math.min(requestedPage, totalPages) : 1;
+
+    if (totalCount === 0) {
+      return {
+        items: [],
+        totalCount,
+        totalPages,
+        currentPage,
+        pageSize,
+      };
+    }
+
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize;
+    const items = await hydrateLibraryRootWords(
+      supabase,
+      matchedRootWords.slice(from, to),
+      filters?.userId ?? null,
+    );
+
+    return {
+      items,
+      totalCount,
+      totalPages,
+      currentPage,
+      pageSize,
+    };
+  }
+
+  const { count, error: countError } = await buildLibraryRootWordsCountQuery(supabase, filters, searchContext);
 
   if (countError) {
     unwrapSupabaseError(countError, "Không thể đếm số lượng root word trong thư viện");
@@ -434,7 +570,7 @@ export async function getPaginatedLibraryRootWords(filters?: PaginatedLibraryRoo
 
   const from = (currentPage - 1) * pageSize;
   const to = from + pageSize - 1;
-  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters).range(from, to);
+  const { data: rootWords, error } = await buildLibraryRootWordsDataQuery(supabase, filters, searchContext).range(from, to);
 
   if (error) {
     unwrapSupabaseError(error, "Không thể tải danh sách root word theo trang");
