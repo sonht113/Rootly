@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -65,18 +65,22 @@ describe("AppTopbar", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the figma header content with search-aligned nav menu and streak data", () => {
+  it("renders the mobile header actions separately from the search form while keeping streak data", () => {
     render(<AppTopbar profile={profile} streak={7} unreadNotificationCount={2} />);
 
     const searchInput = screen.getByRole("searchbox");
     const searchForm = searchInput.closest("form");
     const navMenuButton = screen.getByRole("button", { name: "Mở menu điều hướng" });
+    const notificationsLink = screen.getByRole("link", { name: "Mở thông báo, 2 chưa đọc" });
+    const mobileHeader = screen.getByTestId("topbar-mobile-header");
 
     expect(searchInput).toHaveValue("latin");
     expect(searchForm).not.toBeNull();
-    expect(searchForm).toContainElement(navMenuButton);
+    expect(searchForm).not.toContainElement(navMenuButton);
+    expect(mobileHeader).toContainElement(navMenuButton);
+    expect(mobileHeader).toContainElement(notificationsLink);
+    expect(within(mobileHeader).getByRole("button", { name: "Mở menu hồ sơ" })).toBeInTheDocument();
     expect(navMenuButton).toHaveClass("lg:hidden");
-    expect(navMenuButton.compareDocumentPosition(searchInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("Chuỗi 7 ngày")).toBeInTheDocument();
     expect(screen.getByText("Nguyễn Văn Sơn")).toBeInTheDocument();
     expect(screen.getByText("NS")).toBeInTheDocument();
@@ -128,6 +132,7 @@ describe("AppTopbar", () => {
 
     expect(mockedPush).toHaveBeenCalledWith("/profile");
   });
+
   it("uses role-aware notification and profile routes for teachers", async () => {
     const user = userEvent.setup();
     mockedUsePathname.mockReturnValue("/teacher/classes");
