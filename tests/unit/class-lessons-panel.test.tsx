@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -25,7 +25,7 @@ import { StudentClassLessonsPanel } from "@/features/classes/components/class-le
 import type { ClassLesson } from "@/server/repositories/classes-repository";
 
 describe("class-lessons-panel", () => {
-  it("renders the vocabulary list as a table with bilingual example content", () => {
+  it("renders vocabulary as mobile cards and a desktop table with bilingual example content", () => {
     const lessons: ClassLesson[] = [
       {
         id: "lesson-1",
@@ -64,15 +64,28 @@ describe("class-lessons-panel", () => {
 
     expect(screen.getByText("Buổi học từ giáo viên")).toBeInTheDocument();
     expect(screen.getByText("Ôn lại đồ vật và vai trò thường gặp trong lớp học.")).toBeInTheDocument();
-    expect(screen.getByRole("table")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Từ vựng" })).toBeInTheDocument();
-    expect(screen.getByText("phòng học")).toBeInTheDocument();
-    expect(screen.getByText("/ˈklɑːsruːm/")).toBeInTheDocument();
-    expect(screen.getByText("The classroom is ready.")).toBeInTheDocument();
-    expect(screen.getByText("Phòng học đã sẵn sàng.")).toBeInTheDocument();
+
+    const mobileCards = screen.getByTestId("lesson-vocabulary-cards");
+    const desktopTable = screen.getByTestId("lesson-vocabulary-table");
+
+    expect(within(mobileCards).getByText("Từ vựng")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("classroom")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("phòng học")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("/ˈklɑːsruːm/")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("schoolroom")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("The classroom is ready.")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("Phòng học đã sẵn sàng.")).toBeInTheDocument();
+
+    expect(within(desktopTable).getByRole("table")).toBeInTheDocument();
+    expect(within(desktopTable).getByRole("columnheader", { name: "Từ vựng" })).toBeInTheDocument();
+    expect(within(desktopTable).getByText("classroom")).toBeInTheDocument();
+    expect(within(desktopTable).getByText("phòng học")).toBeInTheDocument();
+    expect(within(desktopTable).getByText("/ˈklɑːsruːm/")).toBeInTheDocument();
+    expect(within(desktopTable).getByText("The classroom is ready.")).toBeInTheDocument();
+    expect(within(desktopTable).getByText("Phòng học đã sẵn sàng.")).toBeInTheDocument();
   });
 
-  it("paginates vocabulary rows 10 items at a time", async () => {
+  it("paginates shared vocabulary data across mobile cards and desktop table", async () => {
     const user = userEvent.setup();
     const lessons: ClassLesson[] = [
       {
@@ -104,15 +117,25 @@ describe("class-lessons-panel", () => {
 
     render(<StudentClassLessonsPanel lessons={lessons} />);
 
-    expect(screen.getByText("word-1")).toBeInTheDocument();
-    expect(screen.getByText("word-10")).toBeInTheDocument();
-    expect(screen.queryByText("word-11")).not.toBeInTheDocument();
+    const mobileCards = screen.getByTestId("lesson-vocabulary-cards");
+    const desktopTable = screen.getByTestId("lesson-vocabulary-table");
+
+    expect(within(mobileCards).getByText("word-1")).toBeInTheDocument();
+    expect(within(mobileCards).getByText("word-10")).toBeInTheDocument();
+    expect(within(mobileCards).queryByText("word-11")).not.toBeInTheDocument();
+
+    expect(within(desktopTable).getByText("word-1")).toBeInTheDocument();
+    expect(within(desktopTable).getByText("word-10")).toBeInTheDocument();
+    expect(within(desktopTable).queryByText("word-11")).not.toBeInTheDocument();
     expect(screen.getByTestId("lesson-vocabulary-pagination")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Sau" }));
 
-    expect(screen.queryByText("word-1")).not.toBeInTheDocument();
-    expect(screen.getByText("word-11")).toBeInTheDocument();
+    expect(within(mobileCards).queryByText("word-1")).not.toBeInTheDocument();
+    expect(within(mobileCards).getByText("word-11")).toBeInTheDocument();
+
+    expect(within(desktopTable).queryByText("word-1")).not.toBeInTheDocument();
+    expect(within(desktopTable).getByText("word-11")).toBeInTheDocument();
     expect(screen.getByText("Trang 2/2")).toBeInTheDocument();
   });
 });

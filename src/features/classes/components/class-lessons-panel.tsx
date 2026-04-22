@@ -65,6 +65,67 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-sm text-[color:var(--danger)]">{message}</p>;
 }
 
+function VocabularySection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function VocabularySynonyms({ itemId, synonyms }: { itemId: string; synonyms: string[] }) {
+  if (synonyms.length === 0) {
+    return <span className="text-sm text-[color:var(--muted-foreground)]">—</span>;
+  }
+
+  return (
+    <ul className="space-y-1 text-sm leading-6 text-[color:var(--foreground)]">
+      {synonyms.map((synonym, index) => (
+        <li key={`${itemId}-synonym-${index}`} className="break-words">
+          {synonym}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function VocabularyExampleList({
+  itemId,
+  exampleSentences,
+}: {
+  itemId: string;
+  exampleSentences: ClassLesson["vocabularyItems"][number]["exampleSentences"];
+}) {
+  if (exampleSentences.length === 0) {
+    return <span className="text-sm text-[color:var(--muted-foreground)]">Chưa có câu ví dụ.</span>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {exampleSentences.map((sentence, index) => (
+        <div
+          key={`${itemId}-example-${index}`}
+          className="rounded-[12px] border border-[color:var(--border)] bg-[color:var(--muted)]/40 p-3"
+        >
+          <p className="break-words font-medium text-[color:var(--foreground)]">{sentence.english}</p>
+          {sentence.vietnamese ? (
+            <p className="mt-1 break-words text-[color:var(--muted-foreground)]">{sentence.vietnamese}</p>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LessonVocabularyList({
   lesson,
   emptyMessage,
@@ -89,7 +150,42 @@ function LessonVocabularyList({
 
   return (
     <div className="space-y-4">
-      <div data-testid="lesson-vocabulary-table">
+      <div data-testid="lesson-vocabulary-cards" className="space-y-3 md:hidden">
+        {visibleItems.map((item) => (
+          <article
+            key={item.id}
+            data-testid="lesson-vocabulary-card"
+            className="space-y-4 rounded-[16px] border border-[color:var(--border)] bg-[color:var(--background)] p-4 shadow-sm"
+          >
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                Từ vựng
+              </p>
+              <h4 className="break-words text-lg font-semibold text-[color:var(--foreground)]">{item.word}</h4>
+            </div>
+
+            <div className="grid gap-4">
+              <VocabularySection label="Nghĩa">
+                <p className="break-words text-sm leading-6 text-[color:var(--foreground)]">{item.meaning}</p>
+              </VocabularySection>
+
+              <VocabularySection label="Phiên âm">
+                <p className="break-words text-sm text-[color:var(--foreground)]">{item.pronunciation ?? "—"}</p>
+              </VocabularySection>
+
+              <VocabularySection label="Từ đồng nghĩa">
+                <VocabularySynonyms itemId={item.id} synonyms={item.synonyms} />
+              </VocabularySection>
+
+              <VocabularySection label="Câu ví dụ">
+                <VocabularyExampleList itemId={item.id} exampleSentences={item.exampleSentences} />
+              </VocabularySection>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div data-testid="lesson-vocabulary-table" className="hidden md:block">
         <Table aria-label={`Danh sách từ vựng của ${lesson.title}`}>
           <TableHeader>
             <TableRow>
@@ -107,32 +203,10 @@ function LessonVocabularyList({
                 <TableCell className="text-[color:var(--muted-foreground)]">{item.meaning}</TableCell>
                 <TableCell className="text-[color:var(--muted-foreground)]">{item.pronunciation ?? "—"}</TableCell>
                 <TableCell>
-                  {item.synonyms.length > 0 ? (
-                    <ul className="space-y-1 text-sm leading-6 text-[color:var(--foreground)]">
-                      {item.synonyms.map((synonym, index) => (
-                        <li key={`${item.id}-synonym-${index}`} className="break-words">
-                          {synonym}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-sm text-[color:var(--muted-foreground)]">—</span>
-                  )}
+                  <VocabularySynonyms itemId={item.id} synonyms={item.synonyms} />
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-3">
-                    {item.exampleSentences.map((sentence, index) => (
-                      <div
-                        key={`${item.id}-example-${index}`}
-                        className="rounded-[12px] border border-[color:var(--border)] bg-[color:var(--muted)]/40 p-3"
-                      >
-                        <p className="break-words font-medium text-[color:var(--foreground)]">{sentence.english}</p>
-                        {sentence.vietnamese ? (
-                          <p className="mt-1 break-words text-[color:var(--muted-foreground)]">{sentence.vietnamese}</p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
+                  <VocabularyExampleList itemId={item.id} exampleSentences={item.exampleSentences} />
                 </TableCell>
               </TableRow>
             ))}
