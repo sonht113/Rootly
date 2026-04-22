@@ -65,46 +65,27 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
   return (
     <div className="rounded-[22px] border border-[color:var(--border)] bg-white/80 px-4 py-4 shadow-sm backdrop-blur-xl md:min-h-[72px] md:px-6">
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
-          <form action={searchConfig.action} method="get" className="order-2 w-full md:order-1 md:max-w-[621px]">
-            <label htmlFor="global-library-search" className="sr-only">
-              {searchConfig.label}
-            </label>
-            <div className="flex items-center gap-2">
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Mở menu điều hướng"
-                  className="size-9 shrink-0 rounded-full text-slate-600 hover:bg-slate-100 lg:hidden"
-                >
-                  <PanelLeftOpen className="size-4" />
-                </Button>
-              </SheetTrigger>
+        <div className="grid gap-3 md:grid-cols-[auto_minmax(0,621px)_minmax(0,1fr)] md:items-center md:gap-4">
+          <div data-testid="topbar-mobile-header" className="flex items-center justify-between md:contents">
+            <SheetTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Mở menu điều hướng"
+                className="size-9 shrink-0 rounded-full text-slate-600 hover:bg-slate-100 md:col-start-1 md:row-start-1 lg:hidden"
+              >
+                <PanelLeftOpen className="size-4" />
+              </Button>
+            </SheetTrigger>
 
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  key={`${pathname ?? ""}:${searchQuery}`}
-                  id="global-library-search"
-                  name="q"
-                  type="search"
-                  defaultValue={searchQuery}
-                  placeholder={searchConfig.placeholder}
-                  className="h-9 rounded-full border-transparent bg-slate-100/70 pl-10 pr-4 shadow-none placeholder:text-slate-500 focus-visible:bg-white"
-                />
+            <div className="flex items-center justify-end gap-2 md:col-start-3 md:row-start-1 md:gap-3">
+              <div className="hidden h-10 items-center gap-2 rounded-full bg-amber-50 px-3 text-sm font-semibold text-slate-600 md:flex">
+                <Flame className="size-4 text-[#994100]" />
+                <span>{`Chuỗi ${streak} ngày`}</span>
               </div>
-            </div>
-          </form>
 
-          <div className="order-1 flex items-center justify-end gap-2 md:order-2 md:gap-3">
-            <div className="hidden h-10 items-center gap-2 rounded-full bg-amber-50 px-3 text-sm font-semibold text-slate-600 md:flex">
-              <Flame className="size-4 text-[#994100]" />
-              <span>{`Chuỗi ${streak} ngày`}</span>
-            </div>
-
-            <Button asChild variant="ghost" size="icon" className="relative size-9 rounded-full text-slate-500 hover:bg-slate-100">
+              <Button asChild variant="ghost" size="icon" className="relative size-9 rounded-full text-slate-500 hover:bg-slate-100">
                 <Link
                   href={getRoleNotificationsPath(profile.role)}
                   aria-label={
@@ -130,47 +111,66 @@ export function AppTopbar({ profile, streak, unreadNotificationCount }: AppTopba
                     </span>
                   ) : null}
                 </Link>
-            </Button>
+              </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Mở menu hồ sơ"
-                  className="flex items-center gap-3 rounded-full px-1 py-0.5 text-left outline-none transition hover:bg-slate-50 md:border-l md:border-[color:var(--border)] md:pl-4 md:hover:bg-transparent"
-                >
-                  <div className="hidden min-w-0 flex-col items-end md:flex">
-                    <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
-                    <span className="text-[10px] font-medium text-slate-500">{roleLabel}</span>
-                  </div>
-                  <Avatar className="size-10 border border-[#0058be1a]">
-                    {profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt={displayName} /> : null}
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="space-y-0.5 px-3 py-2">
-                  <p className="text-sm font-semibold text-slate-900">{displayName}</p>
-                  <p className="text-xs font-medium text-slate-500">{roleLabel}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer px-3 py-2.5 text-slate-700" onSelect={handleOpenProfile}>
-                  <UserRound className="size-4" />
-                  <span>Hồ sơ</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2.5 text-slate-700"
-                  onSelect={() => {
-                    void handleLogout();
-                  }}
-                >
-                  <LogOut className="size-4" />
-                  <span>Đăng xuất</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Mở menu hồ sơ"
+                    className="flex items-center gap-3 rounded-full px-1 py-0.5 text-left outline-none transition hover:bg-slate-50 md:border-l md:border-[color:var(--border)] md:pl-4 md:hover:bg-transparent"
+                  >
+                    <div className="hidden min-w-0 flex-col items-end md:flex">
+                      <span className="truncate text-sm font-semibold text-slate-900">{displayName}</span>
+                      <span className="text-[10px] font-medium text-slate-500">{roleLabel}</span>
+                    </div>
+                    <Avatar className="size-10 border border-[#0058be1a]">
+                      {profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt={displayName} /> : null}
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="space-y-0.5 px-3 py-2">
+                    <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                    <p className="text-xs font-medium text-slate-500">{roleLabel}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer px-3 py-2.5 text-slate-700" onSelect={handleOpenProfile}>
+                    <UserRound className="size-4" />
+                    <span>Hồ sơ</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer px-3 py-2.5 text-slate-700"
+                    onSelect={() => {
+                      void handleLogout();
+                    }}
+                  >
+                    <LogOut className="size-4" />
+                    <span>Đăng xuất</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
+
+          <form action={searchConfig.action} method="get" className="w-full md:col-start-2 md:row-start-1 md:max-w-[621px]">
+            <label htmlFor="global-library-search" className="sr-only">
+              {searchConfig.label}
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                key={`${pathname ?? ""}:${searchQuery}`}
+                id="global-library-search"
+                name="q"
+                type="search"
+                defaultValue={searchQuery}
+                placeholder={searchConfig.placeholder}
+                className="h-9 rounded-full border-transparent bg-slate-100/70 pl-10 pr-4 shadow-none placeholder:text-slate-500 focus-visible:bg-white"
+              />
+            </div>
+          </form>
         </div>
 
         <SheetContent side="left" className="flex w-[min(100%,340px)] flex-col gap-6">
