@@ -685,7 +685,10 @@ export async function upsertRootWord(input: RootWordInput, createdBy: string) {
 
   const rootWordId = rootData.id as string;
 
-  await supabaseAdmin.from("words").delete().eq("root_word_id", rootWordId);
+  const { error: deleteWordsError } = await supabaseAdmin.from("words").delete().eq("root_word_id", rootWordId);
+  if (deleteWordsError) {
+    throw new Error(`Khong the lam moi danh sach tu cua root "${input.root}". ${deleteWordsError.message}`);
+  }
 
   for (const word of input.words) {
     const { data: wordData, error: wordError } = await supabaseAdmin
@@ -734,10 +737,19 @@ export async function deleteRootWord(rootWordId: string) {
 
 export async function importRootWordBatches(batches: RootWordInput[], createdBy: string) {
   for (const batch of batches) {
-    await upsertRootWord(batch, createdBy);
+    try {
+      await upsertRootWord(batch, createdBy);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Khong the import root "${batch.root}". ${error.message}`);
+      }
+
+      throw new Error(`Khong the import root "${batch.root}".`);
+    }
   }
 
   return {
     importedCount: batches.length,
   };
 }
+

@@ -43,6 +43,7 @@ describe("ImportPanel", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement | null;
     expect(input).not.toBeNull();
     expect(input?.accept).toBe(".csv,text/csv");
+    expect(screen.getByText(/gán level basic/i)).toBeInTheDocument();
 
     const file = new File(
       [
@@ -73,5 +74,71 @@ describe("ImportPanel", () => {
 
     expect(mockedToastSuccess).toHaveBeenCalledWith("Đã phân tích tệp nhập liệu");
     expect(screen.getByText(/Bản xem trước:/)).toBeInTheDocument();
+  });
+
+  it("shows a fallback error toast when the commit response body is empty", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ valid: [{ root: "spect" }], invalid: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+
+    render(<ImportPanel />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+
+    const file = new File(
+      [
+        JSON.stringify([
+          {
+            root: "spect",
+            meaning: "to look",
+            description: "Words related to seeing or observing.",
+            level: "basic",
+            tags: ["observation"],
+            is_published: true,
+            words: [
+              {
+                word: "inspect",
+                part_of_speech: "verb",
+                pronunciation: "/in-spekt/",
+                meaning_en: "to look closely",
+                meaning_vi: "kiểm tra kỹ",
+                example_sentences: [
+                  {
+                    english_sentence: "Please inspect the report.",
+                    vietnamese_sentence: "Hãy kiểm tra báo cáo.",
+                    usage_context: "workplace",
+                    is_daily_usage: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ],
+      "root-words.json",
+      { type: "application/json" },
+    );
+
+    await user.upload(input!, file);
+    await user.click(screen.getByRole("button", { name: "Xem trước dữ liệu" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Import hợp lệ" })).toBeEnabled();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Import hợp lệ" }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockedToastError).toHaveBeenCalledWith("Không thể nhập dữ liệu.");
+    });
   });
 });

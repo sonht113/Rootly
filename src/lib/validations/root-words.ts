@@ -17,6 +17,10 @@ export const wordSchema = z.object({
   example_sentences: z.array(exampleSentenceSchema).min(1),
 });
 
+function normalizeWordForDuplicateCheck(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
 export const rootWordSchema = z.object({
   id: z.string().uuid().optional(),
   root: z.string().min(2),
@@ -26,6 +30,26 @@ export const rootWordSchema = z.object({
   tags: z.array(z.string()).default([]),
   is_published: z.boolean().default(false),
   words: z.array(wordSchema).min(1),
+}).superRefine((rootWord, ctx) => {
+  const seenWords = new Set<string>();
+
+  rootWord.words.forEach((word, index) => {
+    const normalizedWord = normalizeWordForDuplicateCheck(word.word);
+    if (!normalizedWord) {
+      return;
+    }
+
+    if (seenWords.has(normalizedWord)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["words", index, "word"],
+        message: `Từ "${word.word}" bị trùng trong root "${rootWord.root}".`,
+      });
+      return;
+    }
+
+    seenWords.add(normalizedWord);
+  });
 });
 
 export const rootWordDetailViewSchema = z.object({
