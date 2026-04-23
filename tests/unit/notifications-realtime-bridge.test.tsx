@@ -40,12 +40,17 @@ function UnreadCountProbe() {
 function createSupabaseMock() {
   const handlers: Record<string, (payload: unknown) => void> = {};
   const authUnsubscribe = vi.fn();
+  let subscribeCallback: ((status: "SUBSCRIBED" | "TIMED_OUT" | "CHANNEL_ERROR" | "CLOSED", error?: Error) => void) | null =
+    null;
   const channel = {
     on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
       handlers[`${type}:${filter.event}`] = callback;
       return channel;
     }),
-    subscribe: vi.fn(() => channel),
+    subscribe: vi.fn((callback?: (status: "SUBSCRIBED" | "TIMED_OUT" | "CHANNEL_ERROR" | "CLOSED", error?: Error) => void) => {
+      subscribeCallback = callback ?? null;
+      return channel;
+    }),
   };
   const supabase = {
     auth: {
@@ -77,6 +82,9 @@ function createSupabaseMock() {
     handlers,
     authUnsubscribe,
     channel,
+    emitSubscribeStatus: (status: "SUBSCRIBED" | "TIMED_OUT" | "CHANNEL_ERROR" | "CLOSED", error?: Error) => {
+      subscribeCallback?.(status, error);
+    },
     supabase,
   };
 }
@@ -104,6 +112,110 @@ describe("NotificationsRealtimeBridge", () => {
     mockedRefresh.mockReset();
     mockedToast.mockReset();
     mockedCreateBrowserSupabaseClient.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("ignores CLOSED from an intentionally removed stale channel during reconnect", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ unreadCount: 2 }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const authStateHandlers: Array<(event: string, session: { access_token?: string } | null) => void> = [];
+    const handlers: Record<string, (payload: unknown) => void> = {};
+    const subscribeCallbacks: Array<
+      ((status: "SUBSCRIBED" | "TIMED_OUT" | "CHANNEL_ERROR" | "CLOSED", error?: Error) => void) | null
+    > = [];
+    const channels: Array<{
+      on: ReturnType<typeof vi.fn>;
+      subscribe: ReturnType<typeof vi.fn>;
+    }> = [];
+    const authUnsubscribe = vi.fn();
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "access-token-1",
+            },
+          },
+        }),
+        onAuthStateChange: vi.fn((callback: (event: string, session: { access_token?: string } | null) => void) => {
+          authStateHandlers.push(callback);
+          return {
+            data: {
+              subscription: {
+                unsubscribe: authUnsubscribe,
+              },
+            },
+          };
+        }),
+      },
+      realtime: {
+        setAuth: vi.fn().mockResolvedValue(undefined),
+      },
+      channel: vi.fn(() => {
+        const channelIndex = channels.length;
+        const nextChannel = {
+          on: vi.fn((type: string, filter: { event: string }, callback: (payload: unknown) => void) => {
+            handlers[`${channelIndex}:${type}:${filter.event}`] = callback;
+            return nextChannel;
+          }),
+          subscribe: vi.fn(
+            (callback?: (status: "SUBSCRIBED" | "TIMED_OUT" | "CHANNEL_ERROR" | "CLOSED", error?: Error) => void) => {
+              subscribeCallbacks[channelIndex] = callback ?? null;
+              return nextChannel;
+            },
+          ),
+        };
+        channels.push(nextChannel);
+        return nextChannel;
+      }),
+      removeChannel: vi.fn().mockResolvedValue("ok"),
+    };
+
+    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+
+    render(
+      <NotificationsUnreadProvider initialUnreadCount={0}>
+        <UnreadCountProbe />
+        <NotificationsRealtimeBridge userId="auth-user-1" />
+      </NotificationsUnreadProvider>,
+    );
+
+    await waitFor(() => {
+      expect(channels).toHaveLength(1);
+      expect(channels[0]?.subscribe).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      authStateHandlers[0]?.("TOKEN_REFRESHED", { access_token: "access-token-2" });
+    });
+
+    await waitFor(() => {
+      expect(supabase.removeChannel).toHaveBeenCalledWith(channels[0]);
+      expect(channels.length).toBeGreaterThanOrEqual(2);
+    });
+    const channelCountBeforeClosed = channels.length;
+
+    await act(async () => {
+      subscribeCallbacks[0]?.("CLOSED");
+    });
+
+    expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+      "Notifications realtime channel is unavailable",
+      expect.objectContaining({
+        status: "CLOSED",
+      }),
+    );
+    expect(channels).toHaveLength(channelCountBeforeClosed);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("subscribes to the current user topic and shows a toast for inserts without refreshing the shell", async () => {
@@ -188,6 +300,45 @@ describe("NotificationsRealtimeBridge", () => {
       expect(screen.getByText("Unread: 1")).toBeInTheDocument();
     });
     expect(mockedRefresh).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates duplicate insert toasts for the same notification event", async () => {
+    const { handlers, channel } = createSupabaseMock();
+
+    render(<NotificationsRealtimeBridge userId="auth-user-1" />);
+
+    await waitFor(() => {
+      expect(channel.subscribe).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      handlers["broadcast:INSERT"]({
+        type: "broadcast",
+        event: "INSERT",
+        payload: {
+          id: "broadcast-duplicate-1",
+          schema: "public",
+          table: "notifications",
+          operation: "INSERT",
+          record: notificationRecord,
+          old_record: null,
+        },
+      });
+      handlers["broadcast:INSERT"]({
+        type: "broadcast",
+        event: "INSERT",
+        payload: {
+          id: "broadcast-duplicate-2",
+          schema: "public",
+          table: "notifications",
+          operation: "INSERT",
+          record: notificationRecord,
+          old_record: null,
+        },
+      });
+    });
+
+    expect(mockedToast).toHaveBeenCalledTimes(1);
   });
 
   it("updates unread state for read updates without showing a new toast or refreshing", async () => {
@@ -304,5 +455,104 @@ describe("NotificationsRealtimeBridge", () => {
 
     expect(screen.getByText("Unread: 0")).toBeInTheDocument();
     expect(mockedRefresh).not.toHaveBeenCalled();
+  });
+
+  it("falls back to refreshing unread count when the realtime channel errors", async () => {
+    const { channel, emitSubscribeStatus } = createSupabaseMock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ unreadCount: 4 }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+      ),
+    );
+
+    render(
+      <NotificationsUnreadProvider initialUnreadCount={0}>
+        <UnreadCountProbe />
+        <NotificationsRealtimeBridge userId="auth-user-1" />
+      </NotificationsUnreadProvider>,
+    );
+
+    await waitFor(() => {
+      expect(channel.subscribe).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      emitSubscribeStatus("CHANNEL_ERROR", new Error("realtime unavailable"));
+    });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/notifications/unread-count", {
+        method: "GET",
+        cache: "no-store",
+      });
+      expect(screen.getByText("Unread: 4")).toBeInTheDocument();
+    });
+  });
+
+  it("does not reconnect when auth state changes but the access token stays the same", async () => {
+    const authStateHandlers: Array<(event: string, session: { access_token?: string } | null) => void> = [];
+    const channel = {
+      on: vi.fn((_: string, __: { event: string }, ___: (payload: unknown) => void) => channel),
+      subscribe: vi.fn(() => channel),
+    };
+    const authUnsubscribe = vi.fn();
+    const supabase = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "access-token-1",
+            },
+          },
+        }),
+        onAuthStateChange: vi.fn((callback: (event: string, session: { access_token?: string } | null) => void) => {
+          authStateHandlers.push(callback);
+          return {
+            data: {
+              subscription: {
+                unsubscribe: authUnsubscribe,
+              },
+            },
+          };
+        }),
+      },
+      realtime: {
+        setAuth: vi.fn().mockResolvedValue(undefined),
+      },
+      channel: vi.fn(() => channel),
+      removeChannel: vi.fn().mockResolvedValue("ok"),
+    };
+
+    mockedCreateBrowserSupabaseClient.mockReturnValue(supabase);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ unreadCount: 0 }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+      ),
+    );
+
+    render(<NotificationsRealtimeBridge userId="auth-user-1" />);
+
+    await waitFor(() => {
+      expect(supabase.channel).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      authStateHandlers[0]?.("TOKEN_REFRESHED", { access_token: "access-token-1" });
+    });
+
+    expect(supabase.channel).toHaveBeenCalledTimes(1);
+    expect(supabase.removeChannel).not.toHaveBeenCalled();
   });
 });
