@@ -75,7 +75,7 @@ export function NotificationsRealtimeBridge({ userId }: NotificationsRealtimeBri
   useEffect(() => {
     let isActive = true;
     let channel: RealtimeChannel | null = null;
-    let retryTimeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    let retryTimeoutId: number | null = null;
     let activeGeneration = 0;
     let intentionalCloseGeneration: number | null = null;
     let isReconnecting = false;
