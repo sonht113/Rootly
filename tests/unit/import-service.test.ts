@@ -61,10 +61,62 @@ describe("import service", () => {
     expect(result.valid).toHaveLength(1);
     expect(result.valid[0]?.meaning).toBe("tin; tín nhiệm");
     expect(result.valid[0]?.description).toBe('Nhóm gốc từ xoay quanh nghĩa "tin; tín nhiệm".');
+    expect(result.valid[0]?.level).toBe("basic");
     expect(result.valid[0]?.words).toHaveLength(10);
     expect(result.valid[0]?.words[0]?.word).toBe("credible");
     expect(result.valid[0]?.words[0]?.meaning_vi).toBe("tin; tín nhiệm");
     expect(result.valid[0]?.words[0]?.example_sentences[0]?.vietnamese_sentence).toBe("Nguồn này có vẻ đáng tin.");
+  });
+
+  it("rejects duplicate words in detailed JSON imports before commit", async () => {
+    const payload = JSON.stringify([
+      {
+        root: "port",
+        meaning: "to carry",
+        description: "Words related to carrying, bringing, or transporting.",
+        level: "basic",
+        tags: ["travel"],
+        is_published: true,
+        words: [
+          {
+            word: "import",
+            part_of_speech: "verb",
+            pronunciation: "/im-port/",
+            meaning_en: "to bring in",
+            meaning_vi: "nhap vao",
+            example_sentences: [
+              {
+                english_sentence: "The store will import new goods.",
+                vietnamese_sentence: "Cua hang se nhap hang moi.",
+                usage_context: "business",
+                is_daily_usage: true,
+              },
+            ],
+          },
+          {
+            word: "Import",
+            part_of_speech: "noun",
+            pronunciation: "/im-port/",
+            meaning_en: "goods brought in",
+            meaning_vi: "hang nhap",
+            example_sentences: [
+              {
+                english_sentence: "Import costs increased this month.",
+                vietnamese_sentence: "Chi phi hang nhap tang trong thang nay.",
+                usage_context: "business",
+                is_daily_usage: true,
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const file = new File([payload], "root-words.json", { type: "application/json" });
+    const result = await parseImportFile(file);
+
+    expect(result.valid).toHaveLength(0);
+    expect(result.invalid[0]?.message).toContain('Từ "Import" bị trùng');
   });
 
   it("parses the full roots-only template without validation errors", async () => {
@@ -76,6 +128,7 @@ describe("import service", () => {
 
     expect(result.invalid).toHaveLength(0);
     expect(result.valid).toHaveLength(60);
+    expect(result.valid[0]?.level).toBe("basic");
     expect(result.valid[0]?.words.length).toBeGreaterThanOrEqual(5);
     expect(result.valid.at(-1)?.root).toBe("al");
   });

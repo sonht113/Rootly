@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { quizSubmissionSchema } from "@/lib/validations/quiz";
 import { getQuizSetForSubmission } from "@/server/repositories/root-word-quizzes-repository";
-import { completeNearestActiveStudyPlanForRootWord } from "@/server/repositories/study-repository";
+import { syncQuizCompletionForRootWord } from "@/server/repositories/study-repository";
 import { isQuizAnswerCorrect, scoreQuizAnswers } from "@/server/services/quiz-service";
 
 export async function POST(request: Request) {
@@ -94,21 +94,24 @@ export async function POST(request: Request) {
   }
 
   let completedLearningPlan = false;
+  let reviewCycleCreated = false;
   let learningPlanSyncError: string | null = null;
 
   try {
-    const completionResult = await completeNearestActiveStudyPlanForRootWord(payload.data.rootWordId);
-    completedLearningPlan = completionResult.completed;
+    const completionResult = await syncQuizCompletionForRootWord(payload.data.rootWordId);
+    completedLearningPlan = completionResult.completedLearningPlan;
+    reviewCycleCreated = completionResult.reviewCycleCreated;
 
-    if (completionResult.completed) {
+    revalidatePath("/library");
+    revalidatePath(`/library/${payload.data.rootWordId}`);
+    revalidatePath("/roots");
+    revalidatePath(`/roots/${payload.data.rootWordId}`);
+
+    if (completionResult.completedLearningPlan || completionResult.reviewCycleCreated) {
       revalidatePath("/calendar");
       revalidatePath("/today");
       revalidatePath("/progress");
       revalidatePath("/reviews");
-      revalidatePath("/library");
-      revalidatePath(`/library/${payload.data.rootWordId}`);
-      revalidatePath("/roots");
-      revalidatePath(`/roots/${payload.data.rootWordId}`);
     }
   } catch (error) {
     learningPlanSyncError = error instanceof Error ? error.message : "Không thể đồng bộ trạng thái học của từ gốc.";
@@ -118,6 +121,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     attemptId: attempt.id,
     completedLearningPlan,
+    reviewCycleCreated,
     learningPlanSyncError,
     ...score,
   });

@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  mockedRevalidatePath,
   mockedCreateServerSupabaseClient,
   mockedRecordRootWordDetailView,
 } = vi.hoisted(() => ({
+  mockedRevalidatePath: vi.fn(),
   mockedCreateServerSupabaseClient: vi.fn(),
   mockedRecordRootWordDetailView: vi.fn(),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: mockedRevalidatePath,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -22,6 +28,7 @@ const ROOT_WORD_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("POST /api/root-word-detail-view", () => {
   beforeEach(() => {
+    mockedRevalidatePath.mockReset();
     mockedCreateServerSupabaseClient.mockReset();
     mockedRecordRootWordDetailView.mockReset();
   });
@@ -108,5 +115,42 @@ describe("POST /api/root-word-detail-view", () => {
       sessionId: "session-1",
     });
     expect(mockedRecordRootWordDetailView).toHaveBeenCalledWith(ROOT_WORD_ID);
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/library");
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/roots");
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/progress");
+  });
+
+  it("does not revalidate dependent pages when the session was already recorded", async () => {
+    mockedCreateServerSupabaseClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: { id: "user-1" },
+          },
+        }),
+      },
+    });
+    mockedRecordRootWordDetailView.mockResolvedValue({
+      recorded: false,
+      sessionId: "session-1",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/root-word-detail-view", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rootWordId: ROOT_WORD_ID }),
+      }),
+    );
+    const result = (await response.json()) as { recorded?: boolean; sessionId?: string };
+
+    expect(response.status).toBe(200);
+    expect(result).toEqual({
+      recorded: false,
+      sessionId: "session-1",
+    });
+    expect(mockedRevalidatePath).not.toHaveBeenCalled();
   });
 });

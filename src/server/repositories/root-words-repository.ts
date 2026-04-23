@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { calculateRootMasteryProgress } from "@/lib/root-mastery-progress";
 import { deriveRootLearningStatus, type RootLearningStatus } from "@/lib/root-learning-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { RootWordDetail, RootWordRow } from "@/types/domain";
@@ -97,6 +98,16 @@ interface LibraryReviewRow {
   updated_at: string;
 }
 
+interface LibraryQuizAttemptRow {
+  root_word_id: string;
+}
+
+interface LibraryStudySessionRow {
+  root_word_id: string;
+  session_type: string;
+  result: Record<string, string | number | boolean | null> | null;
+}
+
 function formatOriginLabel(rootWord: Pick<RootWordRow, "meaning" | "description">) {
   const description = rootWord.description.trim();
   const meaning = rootWord.meaning.trim();
@@ -109,29 +120,46 @@ function formatOriginLabel(rootWord: Pick<RootWordRow, "meaning" | "description"
   return `Nghĩa: "${meaning}"`;
 }
 
-function calculateMasteryProgress(
-  plans: Array<{ status: string }>,
-  reviews: Array<{ status: string }>,
-) {
-  const planWeights: Record<string, number> = {
-    planned: 18,
-    in_progress: 42,
-    completed: 64,
-    overdue: 10,
-    skipped: 0,
-  };
+function getDistinctCompletedReviewSteps(studySessions: LibraryStudySessionRow[]) {
+  const reviewStepsByRootId = new Map<string, Set<number>>();
 
-  const reviewWeights: Record<string, number> = {
-    pending: 8,
-    rescheduled: 6,
-    done: 14,
-    missed: 0,
-  };
+  for (const session of studySessions) {
+    if (session.session_type !== "review") {
+      continue;
+    }
 
-  const planScore = plans.reduce((maxScore, plan) => Math.max(maxScore, planWeights[plan.status] ?? 0), 0);
-  const reviewScore = reviews.reduce((total, review) => total + (reviewWeights[review.status] ?? 0), 0);
+    const reviewStepValue = session.result?.review_step;
+    const normalizedReviewStep =
+      typeof reviewStepValue === "number"
+        ? reviewStepValue
+        : typeof reviewStepValue === "string"
+          ? Number.parseInt(reviewStepValue, 10)
+          : Number.NaN;
 
-  return Math.max(0, Math.min(100, planScore + reviewScore));
+    if (!Number.isFinite(normalizedReviewStep)) {
+      continue;
+    }
+
+    const reviewSteps = reviewStepsByRootId.get(session.root_word_id) ?? new Set<number>();
+    reviewSteps.add(Math.floor(normalizedReviewStep));
+    reviewStepsByRootId.set(session.root_word_id, reviewSteps);
+  }
+
+  return new Map(
+    Array.from(reviewStepsByRootId.entries()).map(([rootWordId, reviewSteps]) => [rootWordId, reviewSteps.size]),
+  );
+}
+
+function getCompletedDetailViewsByRootId(studySessions: LibraryStudySessionRow[]) {
+  return new Set(
+    studySessions
+      .filter((session) => session.session_type === "detail_view")
+      .map((session) => session.root_word_id),
+  );
+}
+
+function getCompletedQuizzesByRootId(quizAttempts: LibraryQuizAttemptRow[]) {
+  return new Set(quizAttempts.map((quizAttempt) => quizAttempt.root_word_id));
 }
 
 function getNormalizedPositiveInteger(value: number | undefined, fallback: number) {
@@ -429,7 +457,21 @@ async function hydrateLibraryRootWords(
     data: [] as LibraryReviewRow[],
     error: null,
   });
-  const [{ data: words, error: wordsError }, { data: plans, error: plansError }, { data: reviews, error: reviewsError }] =
+  const emptyQuizAttemptResult = Promise.resolve({
+    data: [] as LibraryQuizAttemptRow[],
+    error: null,
+  });
+  const emptyStudySessionResult = Promise.resolve({
+    data: [] as LibraryStudySessionRow[],
+    error: null,
+  });
+  const [
+    { data: words, error: wordsError },
+    { data: plans, error: plansError },
+    { data: reviews, error: reviewsError },
+    { data: quizAttempts, error: quizAttemptsError },
+    { data: studySessions, error: studySessionsError },
+  ] =
     await Promise.all([
       supabase.from("words").select("root_word_id, word").in("root_word_id", rootWordIds).order("word"),
       userId
@@ -442,9 +484,20 @@ async function hydrateLibraryRootWords(
             .eq("user_id", userId)
             .in("root_word_id", rootWordIds)
         : emptyReviewResult,
+      userId
+        ? supabase.from("quiz_attempts").select("root_word_id").eq("user_id", userId).in("root_word_id", rootWordIds)
+        : emptyQuizAttemptResult,
+      userId
+        ? supabase
+            .from("study_sessions")
+            .select("root_word_id, session_type, result")
+            .eq("user_id", userId)
+            .in("root_word_id", rootWordIds)
+            .in("session_type", ["detail_view", "review"])
+        : emptyStudySessionResult,
     ]);
 
-  const nestedError = wordsError ?? plansError ?? reviewsError;
+  const nestedError = wordsError ?? plansError ?? reviewsError ?? quizAttemptsError ?? studySessionsError;
   if (nestedError) {
     unwrapSupabaseError(nestedError, "Không thể tải dữ liệu mở rộng cho thư viện");
   }
@@ -472,13 +525,21 @@ async function hydrateLibraryRootWords(
 
   const activeReviewIdByRootId = getActiveReviewIdByRootId((reviews ?? []) as LibraryReviewRow[]);
   const latestCompletedReviewIdByRootId = getLatestCompletedReviewIdByRootId((reviews ?? []) as LibraryReviewRow[]);
+  const detailViewCompletedByRootId = getCompletedDetailViewsByRootId((studySessions ?? []) as LibraryStudySessionRow[]);
+  const quizCompletedByRootId = getCompletedQuizzesByRootId((quizAttempts ?? []) as LibraryQuizAttemptRow[]);
+  const completedReviewStepsByRootId = getDistinctCompletedReviewSteps((studySessions ?? []) as LibraryStudySessionRow[]);
 
   return baseRootWords.map((rootWord) => {
     const relatedWords = wordsByRootId.get(rootWord.id) ?? [];
     const previewWords = relatedWords.slice(0, 3);
     const plansForRoot = plansByRootId.get(rootWord.id) ?? [];
     const reviewsForRoot = reviewsByRootId.get(rootWord.id) ?? [];
-    const masteryProgress = calculateMasteryProgress(plansForRoot, reviewsForRoot);
+    const masteryProgress = calculateRootMasteryProgress({
+      hasCompletedDetailView: detailViewCompletedByRootId.has(rootWord.id),
+      hasCompletedQuiz: quizCompletedByRootId.has(rootWord.id),
+      completedReviewSteps: completedReviewStepsByRootId.get(rootWord.id) ?? 0,
+      isRemembered: reviewsForRoot.some((review) => review.status === "done"),
+    });
     const learningStatus = deriveRootLearningStatus(plansForRoot, reviewsForRoot);
     const { ctaLabel, ctaHref } = getLibraryRootWordCta(
       rootWord.id,
@@ -685,7 +746,10 @@ export async function upsertRootWord(input: RootWordInput, createdBy: string) {
 
   const rootWordId = rootData.id as string;
 
-  await supabaseAdmin.from("words").delete().eq("root_word_id", rootWordId);
+  const { error: deleteWordsError } = await supabaseAdmin.from("words").delete().eq("root_word_id", rootWordId);
+  if (deleteWordsError) {
+    throw new Error(`Khong the lam moi danh sach tu cua root "${input.root}". ${deleteWordsError.message}`);
+  }
 
   for (const word of input.words) {
     const { data: wordData, error: wordError } = await supabaseAdmin
@@ -734,7 +798,15 @@ export async function deleteRootWord(rootWordId: string) {
 
 export async function importRootWordBatches(batches: RootWordInput[], createdBy: string) {
   for (const batch of batches) {
-    await upsertRootWord(batch, createdBy);
+    try {
+      await upsertRootWord(batch, createdBy);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Khong the import root "${batch.root}". ${error.message}`);
+      }
+
+      throw new Error(`Khong the import root "${batch.root}".`);
+    }
   }
 
   return {

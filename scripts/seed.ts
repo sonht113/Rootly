@@ -466,7 +466,7 @@ async function main() {
   ].filter((item) => item.root_word_id);
 
   await supabase.from("user_root_plans").upsert(planPayload, {
-    onConflict: "user_id,root_word_id,scheduled_date",
+    onConflict: "user_id,root_word_id",
   });
 
   const reviewPayload = [

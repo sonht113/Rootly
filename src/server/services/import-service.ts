@@ -20,6 +20,7 @@ const ROOTS_CSV_HEADERS = [
 
 const ROOTS_CSV_LIST_SEPARATOR = "|";
 const ROOTS_CSV_BILINGUAL_SEPARATOR = "=>";
+const ROOTS_CSV_DEFAULT_LEVEL: RootWordInput["level"] = "basic";
 
 function readWorkbook(buffer: Buffer, fileName: string) {
   if (fileName.toLowerCase().endsWith(".csv")) {
@@ -221,7 +222,8 @@ function groupRootsCsvRows(rows: RootsCsvImportRowInput[]) {
         root: row.root,
         meaning: parsedMeaning.rootMeaning,
         description: buildRootsCsvDescription(parsedMeaning.meaningVi),
-        level: "basic",
+        // Roots-only CSV keeps a simpler template and always imports as basic.
+        level: ROOTS_CSV_DEFAULT_LEVEL,
         tags: [],
         is_published: true,
         words: row.word_list.map((word) => ({

@@ -10,6 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ImportMode = "detailed" | "roots";
 
+type ImportPreviewResult = {
+  invalid: Array<{ index: number; message: string }>;
+  message?: string;
+  valid: unknown[];
+};
+
+type ImportCommitResult = {
+  importedCount?: number;
+  message?: string;
+};
+
 const DETAILED_CSV_TEMPLATE_PATH = "/templates/root-words.csv";
 const DETAILED_JSON_TEMPLATE_PATH = "/templates/root-words.json";
 const ROOTS_SAMPLE_TEMPLATE_PATH = "/templates/roots-import-template.csv";
@@ -19,29 +30,47 @@ const IMPORT_MODE_COPY: Record<
   ImportMode,
   {
     accept: string;
-    title: string;
     description: string;
     helperText: string;
+    title: string;
   }
 > = {
   detailed: {
     accept: ".csv,.xlsx,.json",
     title: "Detailed import",
     description: "Import đầy đủ root, words, meanings và example sentences theo schema chi tiết hiện có.",
-    helperText: "Hỗ trợ CSV, XLSX, JSON. Dùng khi bạn muốn kiểm soát từng word và từng câu ví dụ.",
+    helperText: "Hỗ trợ CSV, XLSX, JSON. Schema chi tiết này có hỗ trợ level cho từng root word.",
   },
   roots: {
     accept: ".csv,text/csv",
     title: "Roots-only import",
     description: 'Import nhanh theo 5 cột: "Root Word", "Meaning", "Word List", "Examples", "Pronunciation".',
-    helperText: 'Chỉ hỗ trợ CSV. Dùng "|" để ngăn cách danh sách và "=>" để ghi song ngữ Anh => Việt.',
+    helperText:
+      'Chỉ hỗ trợ CSV. Dùng "|" để ngăn cách danh sách và "=>" để ghi song ngữ Anh => Việt. Tất cả root nhập theo chế độ này sẽ được gán level basic.',
   },
 };
+
+async function readJsonResponse<T>(response: Response) {
+  const responseText = await response.text();
+  if (!responseText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(responseText) as T;
+  } catch {
+    return null;
+  }
+}
+
+function isImportPreviewResult(value: ImportPreviewResult | null): value is ImportPreviewResult {
+  return Boolean(value && Array.isArray(value.valid) && Array.isArray(value.invalid));
+}
 
 export function ImportPanel() {
   const [importMode, setImportMode] = useState<ImportMode>("detailed");
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<{ valid: unknown[]; invalid: Array<{ index: number; message: string }> } | null>(null);
+  const [preview, setPreview] = useState<ImportPreviewResult | null>(null);
   const [isPending, startTransition] = useTransition();
   const activeMode = IMPORT_MODE_COPY[importMode];
 
@@ -58,23 +87,32 @@ export function ImportPanel() {
     }
 
     startTransition(async () => {
-      const formData = new FormData();
-      formData.set("file", file);
-      formData.set("mode", importMode);
+      try {
+        const formData = new FormData();
+        formData.set("file", file);
+        formData.set("mode", importMode);
 
-      const response = await fetch("/api/imports/preview", {
-        method: "POST",
-        body: formData,
-      });
+        const response = await fetch("/api/imports/preview", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await readJsonResponse<ImportPreviewResult>(response);
 
-      const result = (await response.json()) as { valid: unknown[]; invalid: Array<{ index: number; message: string }>; message?: string };
-      if (!response.ok) {
-        toast.error(result.message ?? "Không thể xem trước tệp nhập liệu.");
-        return;
+        if (!response.ok) {
+          toast.error(result?.message ?? "Không thể xem trước tệp nhập liệu.");
+          return;
+        }
+
+        if (!isImportPreviewResult(result)) {
+          toast.error("Không thể đọc phản hồi xem trước dữ liệu.");
+          return;
+        }
+
+        setPreview(result);
+        toast.success("Đã phân tích tệp nhập liệu");
+      } catch {
+        toast.error("Không thể xem trước tệp nhập liệu.");
       }
-
-      setPreview(result);
-      toast.success("Đã phân tích tệp nhập liệu");
     });
   }
 
@@ -84,23 +122,27 @@ export function ImportPanel() {
     }
 
     startTransition(async () => {
-      const response = await fetch("/api/imports/commit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ roots: preview.valid }),
-      });
+      try {
+        const response = await fetch("/api/imports/commit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ roots: preview.valid }),
+        });
+        const result = await readJsonResponse<ImportCommitResult>(response);
 
-      const result = (await response.json()) as { importedCount?: number; message?: string };
-      if (!response.ok) {
-        toast.error(result.message ?? "Không thể nhập dữ liệu.");
-        return;
+        if (!response.ok) {
+          toast.error(result?.message ?? "Không thể nhập dữ liệu.");
+          return;
+        }
+
+        toast.success(`Đã nhập ${result?.importedCount ?? 0} từ gốc`);
+        setPreview(null);
+        setFile(null);
+      } catch {
+        toast.error("Không thể nhập dữ liệu.");
       }
-
-      toast.success(`Đã nhập ${result.importedCount ?? 0} từ gốc`);
-      setPreview(null);
-      setFile(null);
     });
   }
 
