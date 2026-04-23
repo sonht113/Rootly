@@ -4,14 +4,14 @@ const {
   mockedRevalidatePath,
   mockedCreateServerSupabaseClient,
   mockedGetQuizSetForSubmission,
-  mockedCompleteNearestActiveStudyPlanForRootWord,
+  mockedSyncQuizCompletionForRootWord,
   mockedIsQuizAnswerCorrect,
   mockedScoreQuizAnswers,
 } = vi.hoisted(() => ({
   mockedRevalidatePath: vi.fn(),
   mockedCreateServerSupabaseClient: vi.fn(),
   mockedGetQuizSetForSubmission: vi.fn(),
-  mockedCompleteNearestActiveStudyPlanForRootWord: vi.fn(),
+  mockedSyncQuizCompletionForRootWord: vi.fn(),
   mockedIsQuizAnswerCorrect: vi.fn(),
   mockedScoreQuizAnswers: vi.fn(),
 }));
@@ -29,7 +29,7 @@ vi.mock("@/server/repositories/root-word-quizzes-repository", () => ({
 }));
 
 vi.mock("@/server/repositories/study-repository", () => ({
-  completeNearestActiveStudyPlanForRootWord: mockedCompleteNearestActiveStudyPlanForRootWord,
+  syncQuizCompletionForRootWord: mockedSyncQuizCompletionForRootWord,
 }));
 
 vi.mock("@/server/services/quiz-service", () => ({
@@ -47,7 +47,7 @@ describe("POST /api/quiz/submit", () => {
   beforeEach(() => {
     mockedRevalidatePath.mockReset();
     mockedGetQuizSetForSubmission.mockReset();
-    mockedCompleteNearestActiveStudyPlanForRootWord.mockReset();
+    mockedSyncQuizCompletionForRootWord.mockReset();
     mockedIsQuizAnswerCorrect.mockReset();
     mockedScoreQuizAnswers.mockReset();
 
@@ -62,9 +62,10 @@ describe("POST /api/quiz/submit", () => {
         },
       ],
     });
-    mockedCompleteNearestActiveStudyPlanForRootWord.mockResolvedValue({
-      completed: true,
+    mockedSyncQuizCompletionForRootWord.mockResolvedValue({
+      completedLearningPlan: true,
       planId: "plan-1",
+      reviewCycleCreated: true,
     });
     mockedIsQuizAnswerCorrect.mockImplementation((userAnswer: string, correctAnswer: string) => userAnswer === correctAnswer);
     mockedScoreQuizAnswers.mockReturnValue({
@@ -133,10 +134,47 @@ describe("POST /api/quiz/submit", () => {
     expect(result.completedLearningPlan).toBe(true);
     expect(result.correctAnswers).toBe(1);
     expect(result.totalQuestions).toBe(1);
-    expect(mockedCompleteNearestActiveStudyPlanForRootWord).toHaveBeenCalledWith(ROOT_WORD_ID);
+    expect(mockedSyncQuizCompletionForRootWord).toHaveBeenCalledWith(ROOT_WORD_ID);
     expect(mockedRevalidatePath).toHaveBeenCalledWith("/calendar");
     expect(mockedRevalidatePath).toHaveBeenCalledWith("/reviews");
     expect(mockedRevalidatePath).toHaveBeenCalledWith(`/library/${ROOT_WORD_ID}`);
     expect(mockedRevalidatePath).toHaveBeenCalledWith(`/roots/${ROOT_WORD_ID}`);
+  });
+
+  it("still revalidates the library pages when quiz completion only updates mastery progress", async () => {
+    mockedSyncQuizCompletionForRootWord.mockResolvedValueOnce({
+      completedLearningPlan: false,
+      planId: null,
+      reviewCycleCreated: false,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/quiz/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rootWordId: ROOT_WORD_ID,
+          quizSetId: QUIZ_SET_ID,
+          answers: [{ questionId: QUESTION_ID, userAnswer: "answer-a" }],
+        }),
+      }),
+    );
+
+    const result = (await response.json()) as {
+      completedLearningPlan?: boolean;
+      reviewCycleCreated?: boolean;
+    };
+
+    expect(response.status).toBe(200);
+    expect(result.completedLearningPlan).toBe(false);
+    expect(result.reviewCycleCreated).toBe(false);
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/library");
+    expect(mockedRevalidatePath).toHaveBeenCalledWith(`/library/${ROOT_WORD_ID}`);
+    expect(mockedRevalidatePath).toHaveBeenCalledWith("/roots");
+    expect(mockedRevalidatePath).toHaveBeenCalledWith(`/roots/${ROOT_WORD_ID}`);
+    expect(mockedRevalidatePath).not.toHaveBeenCalledWith("/calendar");
+    expect(mockedRevalidatePath).not.toHaveBeenCalledWith("/reviews");
   });
 });

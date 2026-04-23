@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, formatDistanceStrict, isToday, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 
+import { buildReviewDates } from "@/lib/utils/date";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { SchedulePlanInput, UpdatePlanInput } from "@/lib/validations/study-plans";
 import type { ProgressSummaryData, TodayDashboardData, UserRootPlanRow, UserRootReviewRow } from "@/types/domain";
@@ -22,6 +23,14 @@ interface ActivePlanCandidate {
   id: string;
   scheduled_date: string;
   created_at: string;
+}
+
+interface InitialReviewSeed {
+  user_id: string;
+  root_word_id: string;
+  review_date: string;
+  review_step: number;
+  status: "pending";
 }
 
 export interface ReviewCardItem {
@@ -47,6 +56,24 @@ function getLocalTodayDateString() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date());
+}
+
+function formatLocalDateString(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(date);
+}
+
+function buildInitialReviewSeeds(userId: string, rootWordId: string): InitialReviewSeed[] {
+  const today = parseISO(getLocalTodayDateString());
+
+  return buildReviewDates(today).map((reviewDate, index) => ({
+    user_id: userId,
+    root_word_id: rootWordId,
+    review_date: formatLocalDateString(reviewDate),
+    review_step: index + 1,
+    status: "pending",
+  }));
 }
 
 function selectNearestActivePlan(plans: ActivePlanCandidate[]) {
@@ -241,7 +268,7 @@ export async function getRootLearningSnapshot(rootWordId: string) {
     const reviewDate = parseISO(nextReview.review_date);
 
     return {
-      hasPlan: (plans?.length ?? 0) > 0,
+      hasPlan: true,
       nextReviewDate: nextReview.review_date,
       nextReviewText: isToday(reviewDate)
         ? "Lượt ôn tiếp theo là hôm nay (lặp lại ngắt quãng)"
@@ -454,6 +481,89 @@ export async function completeNearestActiveStudyPlanForRootWord(rootWordId: stri
   return {
     completed: true,
     planId: nearestPlan.id,
+  };
+}
+
+async function ensureReviewCycleForRootWord(
+  supabase: ServerSupabaseClient,
+  userId: string,
+  rootWordId: string,
+) {
+  const { data: reviews, error } = await supabase
+    .from("user_root_reviews")
+    .select("review_step")
+    .eq("user_id", userId)
+    .eq("root_word_id", rootWordId);
+
+  if (error) {
+    unwrapSupabaseError(error, "Unable to load the review cycle for this root word");
+  }
+
+  const existingSteps = new Set((reviews ?? []).map((review) => review.review_step));
+  const missingReviewSeeds = buildInitialReviewSeeds(userId, rootWordId).filter(
+    (reviewSeed) => !existingSteps.has(reviewSeed.review_step),
+  );
+
+  if (missingReviewSeeds.length === 0) {
+    return false;
+  }
+
+  const { error: insertError } = await supabase.from("user_root_reviews").insert(missingReviewSeeds);
+
+  if (insertError) {
+    unwrapSupabaseError(insertError, "Unable to seed the review cycle for this root word");
+  }
+
+  return true;
+}
+
+export interface QuizCompletionSyncResult {
+  completedLearningPlan: boolean;
+  planId: string | null;
+  reviewCycleCreated: boolean;
+}
+
+export async function syncQuizCompletionForRootWord(rootWordId: string): Promise<QuizCompletionSyncResult> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      completedLearningPlan: false,
+      planId: null,
+      reviewCycleCreated: false,
+    };
+  }
+
+  const { data: plans, error } = await supabase
+    .from("user_root_plans")
+    .select("id, scheduled_date, created_at")
+    .eq("user_id", user.id)
+    .eq("root_word_id", rootWordId)
+    .in("status", [...ACTIVE_PLAN_STATUSES]);
+
+  if (error) {
+    unwrapSupabaseError(error, "Unable to load active study plans for this root word");
+  }
+
+  const nearestPlan = selectNearestActivePlan((plans ?? []) as ActivePlanCandidate[]);
+  let completedLearningPlan = false;
+  let completedPlanId: string | null = null;
+
+  if (nearestPlan) {
+    await completeStudyPlan(nearestPlan.id);
+    completedLearningPlan = true;
+    completedPlanId = nearestPlan.id;
+  }
+
+  const reviewCycleCreated = await ensureReviewCycleForRootWord(supabase, user.id, rootWordId);
+
+  return {
+    completedLearningPlan,
+    planId: completedPlanId,
+    reviewCycleCreated,
   };
 }
 

@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -26,6 +27,13 @@ export async function POST(request: Request) {
 
   try {
     const result = await recordRootWordDetailView(payload.data.rootWordId);
+
+    if (result.recorded) {
+      revalidatePath("/library");
+      revalidatePath("/roots");
+      revalidatePath("/progress");
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

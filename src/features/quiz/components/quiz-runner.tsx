@@ -114,6 +114,7 @@ export function QuizRunner({ rootWordId, quizSetId, questions }: QuizRunnerProps
         totalQuestions?: number;
         score?: number;
         completedLearningPlan?: boolean;
+        reviewCycleCreated?: boolean;
         learningPlanSyncError?: string | null;
       };
 
@@ -123,7 +124,7 @@ export function QuizRunner({ rootWordId, quizSetId, questions }: QuizRunnerProps
       }
 
       toast.success("Bạn đã hoàn thành quiz. Hãy tiếp tục ôn tập để nhớ tốt hơn.");
-      if (result.completedLearningPlan) {
+      if (result.completedLearningPlan || result.reviewCycleCreated) {
         toast.success("Root word này đã được đánh dấu học xong và đưa vào chu kỳ ôn tập.");
       }
       if (result.learningPlanSyncError) {
